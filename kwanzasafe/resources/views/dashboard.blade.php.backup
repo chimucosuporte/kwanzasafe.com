@@ -1,0 +1,1204 @@
+<x-app-layout>
+
+@php
+    $user = auth()->user();
+
+    // Estado KYC (fonte de verdade do servidor)
+    $kycStatus = [
+        'data'     => (bool) $user->data_verified,
+        'phone'    => (bool) $user->phone_verified_at,
+        'document' => (bool) $user->identity_document_path,
+        'photo'    => (bool) $user->profile_photo_path,
+        'approved' => (bool) $user->identity_verified_at,
+    ];
+
+    $kycDone = count(array_filter($kycStatus));
+    $kycTotal = count($kycStatus);
+    $kycPct = round(($kycDone / $kycTotal) * 100);
+
+    // Tab inicial
+    $allowedTabs = ['home','history','iban','support','profile'];
+    $initialTab = in_array(request()->query('tab'), $allowedTabs)
+              ? request()->query('tab')
+              : 'home';
+
+    // Serializar transações para JS
+    $txForJs = $transactions->map(fn($t) => [
+        'id'              => $t->id,
+        'reference_id'    => $t->reference_id,
+        'status'          => $t->status,
+        'currency_from'   => $t->currency_from,
+        'amount_sent'     => (float) $t->amount_sent,
+        'amount_received' => (float) $t->amount_received,
+        'created_at'      => $t->created_at->diffForHumans(),
+    ])->values()->all();
+
+    // Serializar taxas
+    $ratesForJs = [];
+    foreach ($rates as $r) {
+        $ratesForJs[$r->id] = ['rate' => (float) $r->rate, 'currency' => $r->currency_from];
+    }
+
+    $unreadCount = $unreadMessages ?? 0;
+@endphp
+
+<div x-data="clientDashboard()" x-init="init()" class="ks-app">
+
+<style>
+:root {
+    --ks-emerald:       #064e3b;
+    --ks-emerald-mid:   #065f46;
+    --ks-emerald-light: #d1fae5;
+    --ks-emerald-pale:  #ecfdf5;
+    --ks-gold:          #d97706;
+    --ks-gold-light:    #fef3c7;
+    --ks-danger:        #dc2626;
+    --ks-danger-light:  #fee2e2;
+    --ks-blue:          #2563eb;
+    --ks-blue-light:    #dbeafe;
+    --ks-bg:            #f0fdf4;
+    --ks-border:        #e2e8f0;
+    --ks-text:          #0f172a;
+    --ks-muted:         #64748b;
+    --ks-faint:         #94a3b8;
+    --sidebar-w:        260px;
+    --bottom-h:         68px;
+}
+.ks-app * { box-sizing:border-box; }
+.ks-app { background:var(--ks-bg); min-height:100dvh; color:var(--ks-text); }
+
+/* ============ LAYOUT ============ */
+.ks-layout { display:flex; min-height:100dvh; }
+
+/* ============ SIDEBAR ============ */
+.ks-sidebar {
+    width:var(--sidebar-w);
+    background:linear-gradient(180deg, var(--ks-emerald) 0%, #052e2b 100%);
+    color:white; position:fixed; top:0; left:0; bottom:0; z-index:100;
+    display:flex; flex-direction:column; overflow:hidden;
+}
+.ks-sidebar__logo { padding:1.5rem 1.25rem 1rem; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:0.75rem; }
+.ks-sidebar__logo img { height:36px; width:auto; filter:brightness(0) invert(1); }
+.ks-sidebar__brand { font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; letter-spacing:-0.02em; }
+.ks-sidebar__tagline { font-size:0.6rem; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-top:-2px; }
+
+.ks-sidebar__user { padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:0.625rem; }
+.ks-sidebar__avatar { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:800; font-size:0.8rem; overflow:hidden; flex-shrink:0; }
+.ks-sidebar__user-name { font-weight:600; font-size:0.85rem; line-height:1.2; }
+.ks-sidebar__user-email { font-size:0.65rem; color:rgba(255,255,255,0.5); margin-top:1px; }
+
+.ks-sidebar__nav { flex:1; padding:1rem 0.75rem; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+.ks-sidebar__nav-label { font-size:0.6rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:0.75rem 0.75rem 0.25rem; }
+.ks-nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.625rem 0.75rem; border-radius:10px; cursor:pointer; transition:all 0.18s; color:rgba(255,255,255,0.6); font-size:0.85rem; font-weight:500; border:1px solid transparent; position:relative; }
+.ks-nav-item:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.9); }
+.ks-nav-item.active { background:rgba(255,255,255,0.1); color:white; border-color:rgba(255,255,255,0.12); font-weight:600; }
+.ks-nav-item.active::before { content:''; position:absolute; left:-0.75rem; top:50%; transform:translateY(-50%); width:3px; height:18px; background:#6ee7b7; border-radius:0 3px 3px 0; }
+.ks-nav-item__icon { width:18px; height:18px; flex-shrink:0; opacity:0.75; }
+.ks-nav-item.active .ks-nav-item__icon { opacity:1; }
+.ks-nav-badge { margin-left:auto; background:var(--ks-gold); color:white; font-size:0.6rem; font-weight:800; padding:2px 6px; border-radius:10px; min-width:18px; text-align:center; }
+.ks-nav-badge.danger { background:var(--ks-danger); }
+
+.ks-sidebar__footer { padding:1rem 0.75rem; border-top:1px solid rgba(255,255,255,0.08); }
+.ks-security-pill { padding:0.5rem 0.75rem; border-radius:10px; background:rgba(0,0,0,0.2); display:flex; align-items:center; gap:0.5rem; font-size:0.7rem; }
+.ks-dot { width:6px; height:6px; border-radius:50%; background:#6ee7b7; box-shadow:0 0 6px #6ee7b7; animation:pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ============ MAIN ============ */
+.ks-main { flex:1; margin-left:var(--sidebar-w); display:flex; flex-direction:column; min-height:100dvh; }
+.ks-topbar { background:white; border-bottom:1px solid var(--ks-border); padding:0 1.5rem; height:60px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+.ks-topbar__title { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; }
+.ks-content { flex:1; padding:1.5rem; overflow-y:auto; }
+
+/* ============ FLASH ============ */
+.ks-flash { margin:0 1.5rem; margin-top:1rem; padding:0.875rem 1.125rem; border-radius:12px; font-size:0.85rem; font-weight:500; display:flex; align-items:center; gap:0.625rem; }
+.ks-flash.success { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+.ks-flash.error   { background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; }
+.ks-flash__close  { margin-left:auto; cursor:pointer; opacity:0.6; background:none; border:none; color:inherit; padding:4px; }
+
+/* ============ BADGE STATUS NO TOPBAR ============ */
+.ks-status-pill { display:flex; align-items:center; gap:0.375rem; padding:0.3rem 0.75rem; border-radius:20px; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; }
+.ks-status-pill.ok      { background:var(--ks-emerald-pale); color:var(--ks-emerald); border:1px solid #a7f3d0; }
+.ks-status-pill.warn    { background:#fffbeb; color:#92400e; border:1px solid #fde68a; cursor:pointer; }
+.ks-status-pill.warn:hover { background:#fef3c7; }
+
+/* ============ GATEKEEPER ============ */
+.ks-gatekeeper { flex:1; display:flex; align-items:center; justify-content:center; padding:2rem 1rem; }
+.ks-gate-card { background:white; border-radius:24px; padding:2.5rem 2rem; max-width:500px; width:100%; box-shadow:0 20px 60px rgba(6,78,59,0.15); border:1px solid var(--ks-border); text-align:center; }
+.ks-gate-icon { width:64px; height:64px; background:linear-gradient(135deg,#ecfdf5,#d1fae5); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem; border:2px solid rgba(6,78,59,0.1); }
+.ks-gate-title { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:0.5rem; }
+.ks-gate-sub { font-size:0.875rem; color:var(--ks-muted); line-height:1.6; margin-bottom:1.5rem; }
+
+.ks-checklist { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1.5rem; text-align:left; }
+.ks-check-item { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 0.875rem; border-radius:10px; border:1px solid var(--ks-border); background:#fafafa; font-size:0.8rem; font-weight:500; color:var(--ks-muted); }
+.ks-check-item.done { background:#ecfdf5; border-color:#a7f3d0; color:var(--ks-emerald); }
+.ks-check-item.pending { background:#fffbeb; border-color:#fde68a; color:#92400e; }
+.ks-check-item.waiting { background:#eff6ff; border-color:#bfdbfe; color:#1e40af; }
+.ks-check-circle { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ks-check-item.done .ks-check-circle { background:var(--ks-emerald); }
+.ks-check-item.pending .ks-check-circle { background:var(--ks-gold); }
+.ks-check-item.waiting .ks-check-circle { background:var(--ks-blue); }
+.ks-check-label { flex:1; }
+.ks-check-title { font-weight:600; font-size:0.8rem; }
+.ks-check-hint { font-size:0.68rem; opacity:0.7; margin-top:1px; }
+
+.ks-progress-row { margin-bottom:1rem; }
+.ks-progress-head { display:flex; justify-content:space-between; font-size:0.7rem; font-weight:700; color:var(--ks-muted); margin-bottom:0.375rem; }
+.ks-progress-bar { height:6px; background:#e2e8f0; border-radius:99px; overflow:hidden; }
+.ks-progress-fill { height:100%; background:linear-gradient(90deg,#064e3b,#059669); border-radius:99px; transition:width 0.5s; }
+
+/* ============ BALANCE CARD ============ */
+.ks-hero-card {
+    background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%);
+    border-radius:24px; padding:1.75rem; color:white; position:relative; overflow:hidden;
+    box-shadow:0 12px 40px rgba(6,78,59,0.3); margin-bottom:1.25rem;
+}
+.ks-hero-card::before { content:''; position:absolute; top:-40px; right:-40px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,0.06); }
+.ks-hero-card__label { font-size:0.65rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; opacity:0.6; margin-bottom:0.5rem; }
+.ks-hero-card__amount { font-family:'Syne',sans-serif; font-size:2.25rem; font-weight:800; letter-spacing:-0.03em; line-height:1; margin-bottom:0.25rem; position:relative; z-index:1; }
+.ks-hero-card__sub { font-size:0.75rem; opacity:0.6; margin-bottom:1.25rem; position:relative; z-index:1; }
+.ks-hero-card__actions { display:flex; gap:0.5rem; position:relative; z-index:1; }
+.ks-hero-btn { flex:1; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); color:white; padding:0.625rem 0.875rem; border-radius:10px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.375rem; backdrop-filter:blur(8px); transition:background 0.18s; }
+.ks-hero-btn:hover { background:rgba(255,255,255,0.25); }
+.ks-hero-btn.primary { background:white; color:var(--ks-emerald); }
+.ks-hero-btn.primary:hover { background:#ecfdf5; }
+
+/* ============ SECTION TITLE ============ */
+.ks-section-title { font-family:'Syne',sans-serif; font-size:0.75rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--ks-faint); margin-bottom:0.875rem; }
+
+/* ============ RATES GRID ============ */
+.ks-rates { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.75rem; margin-bottom:1.25rem; }
+.ks-rate { background:white; border-radius:16px; padding:1rem; border:1px solid var(--ks-border); cursor:pointer; transition:all 0.2s; }
+.ks-rate:hover { transform:translateY(-2px); border-color:var(--ks-emerald-light); box-shadow:0 8px 24px rgba(6,78,59,0.1); }
+.ks-rate__dot { width:7px; height:7px; border-radius:50%; background:#10b981; margin-bottom:0.625rem; box-shadow:0 0 0 3px #d1fae5; }
+.ks-rate__pair { font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ks-faint); margin-bottom:0.25rem; }
+.ks-rate__value { font-family:'Syne',sans-serif; font-size:1.25rem; font-weight:800; letter-spacing:-0.02em; }
+.ks-rate__sub { font-size:0.65rem; color:var(--ks-emerald-mid); font-weight:600; margin-top:2px; }
+
+/* ============ CALCULATOR ============ */
+.ks-calc { background:white; border-radius:20px; border:1px solid var(--ks-border); overflow:hidden; margin-bottom:1.25rem; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
+.ks-calc__head { padding:1.25rem 1.5rem 0; display:flex; align-items:center; justify-content:space-between; }
+.ks-calc__title { font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:800; }
+.ks-calc__live { font-size:0.65rem; font-weight:700; color:var(--ks-emerald); background:var(--ks-emerald-pale); padding:3px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.08em; display:flex; align-items:center; gap:4px; }
+.ks-calc__live::before { content:''; width:5px; height:5px; background:#10b981; border-radius:50%; animation:pulse-dot 1.5s infinite; }
+.ks-calc__body { padding:1.25rem 1.5rem 1.5rem; }
+
+.ks-field { margin-bottom:1rem; }
+.ks-field__label { font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ks-faint); margin-bottom:0.375rem; display:block; }
+.ks-input-group { display:flex; align-items:center; background:#f8fafc; border:2px solid var(--ks-border); border-radius:12px; overflow:hidden; transition:border-color 0.2s; }
+.ks-input-group:focus-within { border-color:var(--ks-emerald); background:white; }
+.ks-input-group select, .ks-input-group input { background:transparent; border:none; outline:none; padding:0.75rem 0.875rem; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; width:100%; }
+.ks-input-group select { flex-shrink:0; width:auto; border-right:2px solid var(--ks-border); font-size:0.85rem; padding:0.75rem 0.625rem; cursor:pointer; color:var(--ks-muted); }
+
+.ks-arrow { display:flex; justify-content:center; margin:-8px 0; position:relative; z-index:1; }
+.ks-arrow__btn { width:32px; height:32px; border-radius:50%; background:var(--ks-emerald-light); color:var(--ks-emerald); border:3px solid white; display:flex; align-items:center; justify-content:center; }
+
+.ks-result { background:linear-gradient(135deg,#ecfdf5,#d1fae5); border:2px solid #a7f3d0; border-radius:12px; padding:0.875rem 1.125rem; display:flex; align-items:center; justify-content:space-between; margin:0.75rem 0 1rem; }
+.ks-result__label { font-size:0.7rem; font-weight:700; color:var(--ks-emerald-mid); text-transform:uppercase; letter-spacing:0.08em; }
+.ks-result__value { font-family:'Syne',sans-serif; font-size:1.35rem; font-weight:800; color:var(--ks-emerald); }
+.ks-result__rate { font-size:0.65rem; color:var(--ks-emerald-mid); opacity:0.7; margin-top:2px; }
+
+.ks-fraud-warn { background:#fffbeb; border:2px solid #fde68a; border-radius:12px; padding:0.75rem 1rem; display:flex; gap:0.625rem; align-items:flex-start; margin-bottom:1rem; font-size:0.75rem; color:#78350f; line-height:1.5; }
+
+.ks-btn { width:100%; padding:0.875rem; background:var(--ks-emerald); color:white; font-family:'Syne',sans-serif; font-size:0.85rem; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; border:none; border-radius:12px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:0.5rem; box-shadow:0 4px 16px rgba(6,78,59,0.25); }
+.ks-btn:hover { background:var(--ks-emerald-mid); transform:translateY(-1px); }
+.ks-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+.ks-btn.ghost { background:white; color:var(--ks-muted); border:2px solid var(--ks-border); box-shadow:none; }
+.ks-btn.ghost:hover { border-color:var(--ks-faint); color:var(--ks-text); background:#fafafa; }
+.ks-btn.danger { background:var(--ks-danger); }
+
+/* ============ TRANSACTIONS LIST ============ */
+.ks-tx-list { display:flex; flex-direction:column; gap:0.625rem; }
+.ks-tx { background:white; border-radius:14px; padding:1rem; border:1px solid var(--ks-border); display:flex; align-items:center; gap:0.875rem; text-decoration:none; color:inherit; transition:all 0.18s; }
+.ks-tx:hover { transform:translateX(3px); border-color:var(--ks-emerald-light); }
+.ks-tx__icon { width:38px; height:38px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.ks-tx__icon.completed, .ks-tx__icon.approved { background:var(--ks-emerald-pale); color:var(--ks-emerald); }
+.ks-tx__icon.pending, .ks-tx__icon.awaiting_payment { background:#fffbeb; color:var(--ks-gold); }
+.ks-tx__icon.processing { background:var(--ks-blue-light); color:var(--ks-blue); }
+.ks-tx__icon.cancelled, .ks-tx__icon.expired { background:var(--ks-danger-light); color:var(--ks-danger); }
+.ks-tx__ref { font-family:'Syne',sans-serif; font-size:0.8rem; font-weight:700; }
+.ks-tx__date { font-size:0.65rem; color:var(--ks-faint); margin-top:1px; }
+.ks-tx__amount { font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:800; text-align:right; }
+.ks-tx__kz { font-size:0.7rem; color:var(--ks-emerald-mid); font-weight:600; margin-top:1px; text-align:right; }
+.ks-badge { display:inline-flex; align-items:center; gap:3px; font-size:0.55rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; padding:2px 7px; border-radius:20px; }
+.ks-badge.completed, .ks-badge.approved { background:var(--ks-emerald-pale); color:var(--ks-emerald); }
+.ks-badge.pending, .ks-badge.awaiting_payment { background:#fffbeb; color:#92400e; }
+.ks-badge.processing { background:var(--ks-blue-light); color:#1d4ed8; }
+.ks-badge.cancelled, .ks-badge.expired { background:var(--ks-danger-light); color:var(--ks-danger); }
+
+/* ============ EMPTY STATE ============ */
+.ks-empty { padding:3rem 1.5rem; text-align:center; background:white; border-radius:16px; border:2px dashed var(--ks-border); }
+.ks-empty__icon { font-size:2.5rem; margin-bottom:0.75rem; }
+.ks-empty__title { font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; margin-bottom:0.25rem; }
+.ks-empty__sub { font-size:0.8rem; color:var(--ks-muted); }
+
+/* ============ IBAN CARDS ============ */
+.ks-iban { background:white; border-radius:14px; padding:1rem; border:1px solid var(--ks-border); display:flex; align-items:center; gap:0.875rem; margin-bottom:0.5rem; }
+.ks-iban__logo { width:44px; height:44px; border-radius:10px; background:var(--ks-emerald-light); color:var(--ks-emerald); display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:800; font-size:0.65rem; flex-shrink:0; text-align:center; line-height:1.1; padding:0 4px; }
+.ks-iban__number { font-family:'JetBrains Mono',monospace; font-size:0.8rem; font-weight:700; word-break:break-all; }
+.ks-iban__holder { font-size:0.7rem; color:var(--ks-faint); margin-top:2px; }
+.ks-iban__bank   { font-size:0.6rem; color:var(--ks-muted); margin-top:1px; }
+.ks-iban-add-btn { width:100%; padding:1rem; border:2px dashed var(--ks-border); border-radius:14px; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.8rem; font-weight:600; color:var(--ks-muted); transition:all 0.2s; }
+.ks-iban-add-btn:hover { border-color:var(--ks-emerald); color:var(--ks-emerald); background:var(--ks-emerald-pale); }
+.ks-iban-del { width:30px; height:30px; border-radius:8px; background:var(--ks-danger-light); color:var(--ks-danger); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s; }
+.ks-iban-del:hover { background:var(--ks-danger); color:white; }
+
+/* ============ PROFILE / KYC ============ */
+.ks-profile-hero { background:linear-gradient(135deg,#064e3b,#047857); border-radius:20px; padding:1.75rem; text-align:center; color:white; margin-bottom:1.25rem; position:relative; overflow:hidden; }
+.ks-profile-hero::after { content:''; position:absolute; top:-30px; right:-30px; width:110px; height:110px; border-radius:50%; background:rgba(255,255,255,0.05); }
+.ks-profile-avatar { width:72px; height:72px; border-radius:50%; border:3px solid rgba(255,255,255,0.3); overflow:hidden; margin:0 auto 0.875rem; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; position:relative; z-index:1; }
+.ks-profile-name { font-family:'Syne',sans-serif; font-size:1.15rem; font-weight:800; letter-spacing:-0.01em; position:relative; z-index:1; }
+.ks-profile-email { font-size:0.75rem; opacity:0.7; position:relative; z-index:1; }
+
+.ks-step { background:white; border-radius:16px; border:2px solid var(--ks-border); overflow:hidden; margin-bottom:0.75rem; transition:all 0.2s; }
+.ks-step.done { border-color:#a7f3d0; }
+.ks-step.pending { border-color:#fde68a; }
+.ks-step.waiting { border-color:#bfdbfe; }
+.ks-step__head { padding:0.875rem 1.125rem; display:flex; align-items:center; gap:0.75rem; cursor:pointer; }
+.ks-step__num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:800; font-size:0.75rem; flex-shrink:0; }
+.ks-step.done .ks-step__num { background:var(--ks-emerald-pale); color:var(--ks-emerald); }
+.ks-step.pending .ks-step__num { background:#fffbeb; color:#92400e; }
+.ks-step.waiting .ks-step__num { background:var(--ks-blue-light); color:#1e40af; }
+.ks-step__label { font-size:0.85rem; font-weight:700; flex:1; }
+.ks-step__body { padding:0 1.125rem 1.25rem; border-top:1px solid var(--ks-border); padding-top:1rem; }
+.ks-verify-tag { display:inline-flex; align-items:center; gap:3px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; padding:3px 7px; border-radius:20px; }
+.ks-verify-tag.ok { background:var(--ks-emerald-pale); color:var(--ks-emerald); }
+.ks-verify-tag.warn { background:#fffbeb; color:#92400e; }
+.ks-verify-tag.wait { background:var(--ks-blue-light); color:#1e40af; }
+
+.ks-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.625rem; }
+.ks-form-input, .ks-form-select { width:100%; padding:0.625rem 0.875rem; border:2px solid var(--ks-border); border-radius:10px; font-size:0.85rem; outline:none; background:white; font-family:'DM Sans',sans-serif; }
+.ks-form-input:focus, .ks-form-select:focus { border-color:var(--ks-emerald); }
+.ks-form-field { margin-bottom:0.625rem; }
+.ks-form-field label { font-size:0.6rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ks-faint); margin-bottom:0.25rem; display:block; }
+
+.ks-upload { border:2px dashed var(--ks-border); border-radius:12px; padding:1.25rem; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; }
+.ks-upload:hover { border-color:var(--ks-emerald); background:var(--ks-emerald-pale); }
+.ks-upload input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.ks-upload__txt { font-size:0.8rem; font-weight:600; color:var(--ks-muted); }
+.ks-upload__sub { font-size:0.68rem; color:var(--ks-faint); margin-top:3px; }
+
+.ks-logout-btn { width:100%; padding:0.875rem; border-radius:12px; border:2px solid var(--ks-danger-light); background:white; color:var(--ks-danger); font-family:'Syne',sans-serif; font-weight:800; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-top:1.25rem; transition:all 0.18s; }
+.ks-logout-btn:hover { background:var(--ks-danger); color:white; }
+
+/* ============ BOTTOM NAV ============ */
+.ks-bottom { position:fixed; bottom:0; left:0; right:0; z-index:100; background:white; border-top:1px solid var(--ks-border); display:flex; height:var(--bottom-h); padding:0 4px; box-shadow:0 -4px 20px rgba(0,0,0,0.05); }
+.ks-bottom__item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; padding:4px; border-radius:10px; margin:5px 2px; transition:all 0.18s; position:relative; }
+.ks-bottom__item.active { background:var(--ks-emerald-pale); }
+.ks-bottom__icon { width:20px; height:20px; color:var(--ks-faint); }
+.ks-bottom__item.active .ks-bottom__icon { color:var(--ks-emerald); }
+.ks-bottom__label { font-size:0.58rem; font-weight:700; color:var(--ks-faint); letter-spacing:0.05em; }
+.ks-bottom__item.active .ks-bottom__label { color:var(--ks-emerald); }
+.ks-bottom__badge { position:absolute; top:4px; right:10px; min-width:16px; height:16px; background:var(--ks-danger); color:white; font-size:0.52rem; font-weight:800; border-radius:20px; padding:0 4px; display:flex; align-items:center; justify-content:center; border:2px solid white; }
+
+/* ============ MODAL ============ */
+.ks-modal-bg { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); display:flex; align-items:flex-end; justify-content:center; padding:1rem; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+.ks-modal-bg.open { opacity:1; pointer-events:all; }
+.ks-modal { background:white; border-radius:20px; padding:1.75rem; width:100%; max-width:460px; transform:translateY(30px); transition:transform 0.3s; max-height:90dvh; overflow-y:auto; }
+.ks-modal-bg.open .ks-modal { transform:translateY(0); }
+.ks-modal__title { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; margin-bottom:0.25rem; }
+.ks-modal__sub { font-size:0.8rem; color:var(--ks-muted); margin-bottom:1.25rem; }
+.ks-modal__actions { display:flex; gap:0.5rem; margin-top:1rem; }
+
+/* ============ SUPPORT ============ */
+.ks-support-card { background:white; border-radius:20px; border:1px solid var(--ks-border); padding:2rem 1.5rem; text-align:center; margin-bottom:1rem; }
+.ks-wa-btn { display:inline-flex; align-items:center; gap:0.625rem; background:#25d366; color:white; padding:0.875rem 1.5rem; border-radius:12px; font-family:'Syne',sans-serif; font-size:0.85rem; font-weight:800; text-decoration:none; transition:all 0.2s; box-shadow:0 6px 20px rgba(37,211,102,0.3); }
+.ks-wa-btn:hover { background:#1ebe5d; transform:translateY(-1px); }
+.ks-faq { background:white; border-radius:12px; border:1px solid var(--ks-border); margin-bottom:0.5rem; overflow:hidden; }
+.ks-faq summary { padding:0.875rem 1.125rem; cursor:pointer; font-size:0.85rem; font-weight:600; list-style:none; display:flex; align-items:center; justify-content:space-between; }
+.ks-faq summary::after { content:'+'; font-size:1.125rem; color:var(--ks-faint); transition:transform 0.2s; }
+.ks-faq[open] summary::after { transform:rotate(45deg); }
+.ks-faq__body { padding:0 1.125rem 1rem; font-size:0.78rem; color:var(--ks-muted); line-height:1.6; }
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:1023px) {
+    .ks-sidebar { display:none !important; }
+    .ks-main { margin-left:0; padding-bottom:var(--bottom-h); }
+    .ks-content { padding:1rem; }
+    .ks-topbar { padding:0 1rem; }
+    .ks-form-grid { grid-template-columns:1fr; }
+}
+@media(min-width:1024px) {
+    .ks-bottom { display:none !important; }
+}
+
+/* ============ ANIMATIONS ============ */
+@keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.ks-fade { animation:fadeInUp 0.3s ease forwards; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.ks-spin { animation:spin 1s linear infinite; }
+</style>
+
+<div class="ks-layout">
+
+    {{-- ============ SIDEBAR DESKTOP ============ --}}
+    <aside class="ks-sidebar">
+        <div class="ks-sidebar__logo">
+            <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" onerror="this.style.display='none'">
+            <div>
+                <div class="ks-sidebar__brand">KwanzaSafe</div>
+                <div class="ks-sidebar__tagline">Huambo • Angola</div>
+            </div>
+        </div>
+
+        <div class="ks-sidebar__user">
+            <div class="ks-sidebar__avatar">
+                @if($user->profile_photo_path)
+                    <img src="{{ asset('storage/'.$user->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
+                @else
+                    {{ strtoupper(substr($user->full_name ?? $user->email, 0, 1)) }}
+                @endif
+            </div>
+            <div style="min-width:0;flex:1;">
+                <div class="ks-sidebar__user-name">{{ Str::limit($user->full_name ?? 'Cliente', 18) }}</div>
+                <div class="ks-sidebar__user-email">{{ Str::limit($user->email, 22) }}</div>
+            </div>
+        </div>
+
+        <nav class="ks-sidebar__nav">
+            <div class="ks-sidebar__nav-label">Principal</div>
+            <div @click="setTab('home')" class="ks-nav-item" :class="{active:activeTab==='home'}">
+                <svg class="ks-nav-item__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                Início
+            </div>
+            <div @click="setTab('history')" class="ks-nav-item" :class="{active:activeTab==='history'}">
+                <svg class="ks-nav-item__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Histórico
+                <span class="ks-nav-badge" x-show="pendingCount>0" x-text="pendingCount"></span>
+                @if($unreadCount > 0)
+                    <span class="ks-nav-badge danger">💬 {{ $unreadCount }}</span>
+                @endif
+            </div>
+            <div @click="setTab('iban')" class="ks-nav-item" :class="{active:activeTab==='iban'}">
+                <svg class="ks-nav-item__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/><line x1="1" y1="10" x2="23" y2="10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                Cofre IBAN
+            </div>
+
+            <div class="ks-sidebar__nav-label" style="margin-top:0.5rem;">Ajuda & Conta</div>
+            <div @click="setTab('support')" class="ks-nav-item" :class="{active:activeTab==='support'}">
+                <svg class="ks-nav-item__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                Suporte
+            </div>
+            <div @click="setTab('profile')" class="ks-nav-item" :class="{active:activeTab==='profile'}">
+                <svg class="ks-nav-item__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                Perfil & KYC
+                @if(!$kycStatus['approved'])
+                    <span class="ks-nav-badge">{{ $kycDone }}/{{ $kycTotal }}</span>
+                @endif
+            </div>
+
+            @if($user->is_admin)
+            <div class="ks-sidebar__nav-label" style="margin-top:0.5rem;">Admin</div>
+            <a href="{{ route('admin.dashboard') }}" class="ks-nav-item" style="text-decoration:none;">
+                <svg class="ks-nav-item__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Painel Admin ↗
+            </a>
+            @endif
+        </nav>
+
+        <div class="ks-sidebar__footer">
+            <div class="ks-security-pill">
+                <div class="ks-dot"></div>
+                <div>
+                    <div style="font-weight:700;color:rgba(255,255,255,0.7);">Ligação Segura</div>
+                    <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);">TLS 1.3 • BNA Compliant</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    {{-- ============ MAIN ============ --}}
+    <main class="ks-main">
+
+        {{-- TOPBAR --}}
+        <header class="ks-topbar">
+            <span class="ks-topbar__title font-display" x-text="tabTitle"></span>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                @if($kycStatus['approved'])
+                    <span class="ks-status-pill ok">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        Verificado
+                    </span>
+                @else
+                    <span @click="setTab('profile')" class="ks-status-pill warn">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01"/></svg>
+                        Verificar
+                    </span>
+                @endif
+            </div>
+        </header>
+
+        {{-- FLASH --}}
+        @if(session('success'))
+            <div class="ks-flash success" x-data="{s:true}" x-show="s">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ session('success') }}
+                <button class="ks-flash__close" @click="s=false">✕</button>
+            </div>
+        @endif
+        @if(session('error') || $errors->any())
+            <div class="ks-flash error" x-data="{s:true}" x-show="s">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                {{ session('error') ?? $errors->first() }}
+                <button class="ks-flash__close" @click="s=false">✕</button>
+            </div>
+        @endif
+
+        @auth
+            @if(!auth()->user()->email_verified_at)
+                <div style="background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:1px solid #f59e0b;border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.875rem;">
+                    <div style="width:42px;height:42px;background:#f59e0b;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="20" height="20" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:0.85rem;color:#92400e;">
+                            Verifica o teu email
+                        </div>
+                        <div style="font-size:0.75rem;color:#78350f;margin-top:1px;">
+                            {{ auth()->user()->email }} ainda não foi verificado.
+                        </div>
+                    </div>
+                    <a href="{{ route('otp.email.verify') }}" style="background:#000;color:white;padding:0.5rem 0.875rem;border-radius:10px;font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;text-decoration:none;flex-shrink:0;">
+                        Verificar →
+                    </a>
+                </div>
+            @endif
+        @endauth
+
+        {{-- ============ GATEKEEPER ============ --}}
+        <template x-if="activeTab==='home' && !kycApproved">
+            <div class="ks-gatekeeper ks-fade">
+                <div class="ks-gate-card">
+                    <div class="ks-gate-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#064e3b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <h2 class="ks-gate-title font-display">Verificação de Identidade</h2>
+                    <p class="ks-gate-sub">Por exigência do BNA e conformidade AML, a tua identidade precisa de ser confirmada antes de realizares qualquer câmbio.</p>
+
+                    <div class="ks-progress-row">
+                        <div class="ks-progress-head">
+                            <span>Progresso</span>
+                            <span style="color:var(--ks-emerald);">{{ $kycPct }}%</span>
+                        </div>
+                        <div class="ks-progress-bar">
+                            <div class="ks-progress-fill" style="width:{{ $kycPct }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="ks-checklist">
+                        @php
+                            $steps = [
+                                ['id'=>'data', 'label'=>'Dados Pessoais', 'hint'=>'Nome, BI, Endereço, Província'],
+                                ['id'=>'phone', 'label'=>'Telefone Verificado', 'hint'=>'WhatsApp ativo'],
+                                ['id'=>'document', 'label'=>'Documento de Identidade', 'hint'=>'Fotografia do BI'],
+                                ['id'=>'photo', 'label'=>'Selfie / Foto de Rosto', 'hint'=>'Foto do rosto nítida'],
+                                ['id'=>'approved', 'label'=>'Aprovação do Admin', 'hint'=>'Análise em até 24h'],
+                            ];
+                        @endphp
+                        @foreach($steps as $i => $s)
+                            @php
+                                $isDone = $kycStatus[$s['id']];
+                                $isWaiting = ($s['id'] === 'approved' && $kycDone >= 4 && !$isDone);
+                                $cls = $isDone ? 'done' : ($isWaiting ? 'waiting' : 'pending');
+                            @endphp
+                            <div class="ks-check-item {{ $cls }}">
+                                <div class="ks-check-circle">
+                                    @if($isDone)
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                                    @elseif($isWaiting)
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    @else
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    @endif
+                                </div>
+                                <div class="ks-check-label">
+                                    <div class="ks-check-title">{{ $s['label'] }}</div>
+                                    <div class="ks-check-hint">{{ $s['hint'] }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <button @click="setTab('profile')" class="ks-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 12h15"/></svg>
+                        Completar Verificação
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        {{-- ============ HOME TAB ============ --}}
+        <template x-if="activeTab==='home' && kycApproved">
+            <div class="ks-content ks-fade">
+
+                {{-- Hero --}}
+                <div class="ks-hero-card">
+                    <div class="ks-hero-card__label">Total Trocado (Concluído)</div>
+                    <div class="ks-hero-card__amount font-display">
+                        <span x-text="formatKz(totalSent)"></span>
+                        <small style="font-size:0.9rem;opacity:0.6;"> {{ $rates->first()->currency_from ?? 'EUR' }}</small>
+                    </div>
+                    <div class="ks-hero-card__sub" x-text="completedCount + ' operações concluídas'"></div>
+                    <div class="ks-hero-card__actions">
+                        <button @click="setTab('history')" class="ks-hero-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6"/></svg>
+                            Histórico
+                        </button>
+                        <button @click="scrollToCalc" class="ks-hero-btn primary">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            Nova Troca
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Taxas --}}
+                <div class="ks-section-title">Cotações ao Vivo</div>
+                <div class="ks-rates">
+                    @forelse($rates as $rate)
+                    <div class="ks-rate" @click="selectRate({{ $rate->id }})">
+                        <div class="ks-rate__dot"></div>
+                        <div class="ks-rate__pair">{{ $rate->currency_from }} → AOA</div>
+                        <div class="ks-rate__value font-display">{{ number_format($rate->rate, 0, ',', '.') }}</div>
+                        <div class="ks-rate__sub">Kz por 1 {{ $rate->currency_from }}</div>
+                    </div>
+                    @empty
+                    <div style="grid-column:1/-1;text-align:center;padding:1.5rem;color:var(--ks-faint);font-size:0.85rem;">Sem taxas disponíveis.</div>
+                    @endforelse
+                </div>
+
+                {{-- Calculadora --}}
+                <div class="ks-calc" id="ks-calc">
+                    <div class="ks-calc__head">
+                        <div class="ks-calc__title font-display">Simulador de Câmbio</div>
+                        <span class="ks-calc__live">Tempo Real</span>
+                    </div>
+                    <div class="ks-calc__body">
+                        <div class="ks-fraud-warn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" style="flex-shrink:0;margin-top:1px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            <span><strong>Anti-Fraude:</strong> O nome da conta de origem deve coincidir exatamente com o teu nome no BI. Pagamentos de terceiros são recusados.</span>
+                        </div>
+
+                        <form method="POST" action="{{ route('transaction.store') }}" x-data="calcEngine()" x-init="initCalc()" @submit.prevent="submitTx($el)">
+                            @csrf
+                            <div class="ks-field">
+                                <label class="ks-field__label">Moeda e Valor a Enviar</label>
+                                <div class="ks-input-group">
+                                    <select name="moeda" x-model="rateId" @change="recalc()">
+                                        <option value="">Moeda</option>
+                                        @foreach($rates as $rate)
+                                            <option value="{{ $rate->id }}">{{ $rate->currency_from }}</option>
+                                        @endforeach
+                                    </select>
+                                    <input type="number" name="valor_enviar" x-model="amountSent" @input="recalc()" placeholder="0,00" step="0.01" min="10" required inputmode="decimal" style="flex:1;">
+                                </div>
+                                <template x-if="amountSent > 0 && amountSent < 10">
+                                    <p style="font-size:0.7rem;color:var(--ks-danger);margin-top:4px;font-weight:600;">Mínimo: 10 unidades.</p>
+                                </template>
+                            </div>
+
+                            <div class="ks-arrow">
+                                <div class="ks-arrow__btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                                </div>
+                            </div>
+
+                            <div class="ks-result">
+                                <div>
+                                    <div class="ks-result__label">Recebes em AOA</div>
+                                    <div class="ks-result__rate" x-show="rate>0">Taxa: 1 <span x-text="currency"></span> = <span x-text="formatKz(rate)"></span> Kz</div>
+                                </div>
+                                <div class="ks-result__value font-display">
+                                    <span x-text="amountReceived>0 ? formatKz(amountReceived) : '—'"></span>
+                                    <span style="font-size:0.75rem;" x-show="amountReceived>0"> Kz</span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="ks-btn" :disabled="!canSubmit||submitting">
+                                <template x-if="submitting">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ks-spin"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" opacity="0.3"/><path d="M21 12c0-4.97-4.03-9-9-9"/></svg>
+                                </template>
+                                <template x-if="!submitting">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                </template>
+                                <span x-text="submitting ? 'A processar…' : 'Iniciar Transação'"></span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {{-- Últimas Transações --}}
+                <template x-if="transactions.length > 0">
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.875rem;">
+                            <div class="ks-section-title" style="margin-bottom:0;">Últimas Operações</div>
+                            <button @click="setTab('history')" style="font-size:0.7rem;font-weight:700;color:var(--ks-emerald);background:none;border:none;cursor:pointer;">Ver Todas →</button>
+                        </div>
+                        <div class="ks-tx-list">
+                            <template x-for="tx in transactions.slice(0,3)" :key="tx.id">
+                                <a :href="'/transaction/'+tx.reference_id" class="ks-tx">
+                                    <div class="ks-tx__icon" :class="tx.status">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                    </div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div class="ks-tx__ref">#<span x-text="tx.reference_id"></span></div>
+                                        <div class="ks-tx__date" x-text="tx.created_at"></div>
+                                    </div>
+                                    <div>
+                                        <div class="ks-tx__amount" x-text="tx.amount_sent+' '+tx.currency_from"></div>
+                                        <div class="ks-tx__kz" x-text="formatKz(tx.amount_received)+' Kz'"></div>
+                                    </div>
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
+        </template>
+
+        {{-- ============ HISTORY TAB ============ --}}
+        <template x-if="activeTab==='history'">
+            <div class="ks-content ks-fade">
+                <div class="ks-section-title">Todas as Transações</div>
+
+                <div style="display:flex;gap:0.375rem;flex-wrap:wrap;margin-bottom:1rem;">
+                    <template x-for="f in filters" :key="f.key">
+                        <button @click="filter=f.key"
+                            style="padding:0.35rem 0.75rem;border-radius:20px;cursor:pointer;font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;transition:all 0.18s;border:1px solid transparent;"
+                            :style="filter===f.key?'background:var(--ks-emerald);color:white;':'background:white;color:var(--ks-muted);border-color:var(--ks-border);'"
+                            x-text="f.label"></button>
+                    </template>
+                </div>
+
+                <template x-if="filtered.length === 0">
+                    <div class="ks-empty">
+                        <div class="ks-empty__icon">📋</div>
+                        <div class="ks-empty__title font-display">Sem Operações</div>
+                        <div class="ks-empty__sub" x-text="filter==='all'?'Ainda não realizaste nenhuma transação.':'Sem transações com este estado.'"></div>
+                    </div>
+                </template>
+
+                <div class="ks-tx-list">
+                    <template x-for="tx in filtered" :key="tx.id">
+                        <a :href="'/transaction/'+tx.reference_id" class="ks-tx">
+                            <div class="ks-tx__icon" :class="tx.status">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap;">
+                                    <span class="ks-tx__ref">#<span x-text="tx.reference_id"></span></span>
+                                    <span class="ks-badge" :class="tx.status" x-text="statusLabel(tx.status)"></span>
+                                </div>
+                                <div class="ks-tx__date" x-text="tx.created_at"></div>
+                            </div>
+                            <div>
+                                <div class="ks-tx__amount" x-text="tx.amount_sent+' '+tx.currency_from"></div>
+                                <div class="ks-tx__kz" x-text="formatKz(tx.amount_received)+' Kz'"></div>
+                            </div>
+                        </a>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        {{-- ============ IBAN TAB ============ --}}
+        <template x-if="activeTab==='iban'">
+            <div class="ks-content ks-fade">
+                <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:2px solid #a7f3d0;border-radius:14px;padding:1rem;margin-bottom:1rem;display:flex;gap:0.625rem;align-items:flex-start;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ks-emerald)" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    <div style="font-size:0.78rem;color:var(--ks-emerald);line-height:1.6;">
+                        <strong>Segurança:</strong> Apenas contas bancárias angolanas em teu nome. O titular é verificado contra o teu BI.
+                    </div>
+                </div>
+
+                <div class="ks-section-title">As Tuas Contas Bancárias</div>
+
+                @if($beneficiaries->isEmpty())
+                    <div class="ks-empty" style="margin-bottom:0.75rem;">
+                        <div class="ks-empty__icon">🏦</div>
+                        <div class="ks-empty__title font-display">Cofre Vazio</div>
+                        <div class="ks-empty__sub">Adiciona uma conta para receber os teus Kwanzas.</div>
+                    </div>
+                @else
+                    @foreach($beneficiaries as $bene)
+                    <div class="ks-iban">
+                        <div class="ks-iban__logo">{{ strtoupper(substr($bene->bank_name, 0, 3)) }}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="ks-iban__number">{{ $bene->iban }}</div>
+                            <div class="ks-iban__holder">{{ $bene->holder_name }}</div>
+                            <div class="ks-iban__bank">{{ $bene->bank_name }}</div>
+                        </div>
+                        <form method="POST" action="{{ route('beneficiary.destroy', $bene->id) }}" onsubmit="return confirm('Remover esta conta?');">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="ks-iban-del" title="Remover">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                    @endforeach
+                @endif
+
+                <button class="ks-iban-add-btn" @click="openIbanModal=true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Adicionar Conta Bancária
+                </button>
+
+                <div style="margin-top:1.5rem;">
+                    <div class="ks-section-title">Bancos Suportados</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;">
+                        @foreach(['BAI','BFA','BIC','BPC','ATL','SOL','KEVE','BNI','BMA','FINA','BCI','Mill.'] as $b)
+                            <div style="background:white;border:1px solid var(--ks-border);border-radius:8px;padding:0.625rem;text-align:center;font-size:0.7rem;font-weight:700;color:var(--ks-muted);">{{ $b }}</div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        {{-- ============ SUPPORT TAB ============ --}}
+        <template x-if="activeTab==='support'">
+            <div class="ks-content ks-fade">
+                <div class="ks-support-card">
+                    <div style="width:56px;height:56px;background:#dcfce7;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                    </div>
+                    <h3 class="font-display" style="font-size:1.25rem;font-weight:800;margin-bottom:0.25rem;">Suporte Direto</h3>
+                    <p style="font-size:0.8rem;color:var(--ks-muted);margin-bottom:1.25rem;line-height:1.6;">Equipa em Huambo • Resposta em menos de 2h em dias úteis.</p>
+                    <a href="https://wa.me/244931719207?text=Olá%2C+preciso+de+suporte+KwanzaSafe." target="_blank" class="ks-wa-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                        WhatsApp — 931 719 207
+                    </a>
+                </div>
+
+                <div class="ks-section-title">FAQ</div>
+                <details class="ks-faq"><summary>Como funciona o câmbio?</summary><div class="ks-faq__body">Usas a calculadora para simular, criamos a transação, recebes os dados bancários e transferes. Após validarmos o comprovativo, enviamos os Kwanzas.</div></details>
+                <details class="ks-faq"><summary>Quanto tempo demora?</summary><div class="ks-faq__body">Em dias úteis, após comprovativo válido, até 4h. Operações antes das 14h são concluídas no mesmo dia.</div></details>
+                <details class="ks-faq"><summary>Posso enviar de conta de terceiros?</summary><div class="ks-faq__body">Não. O nome do titular da conta origem deve corresponder ao teu BI. Transferências de terceiros são recusadas por segurança AML.</div></details>
+                <details class="ks-faq"><summary>Limites por operação?</summary><div class="ks-faq__body">Mínimo: 10 EUR/BRL. Para valores acima de 5000 EUR pode ser pedida documentação adicional (AML).</div></details>
+            </div>
+        </template>
+
+        {{-- ============ PROFILE / KYC TAB ============ --}}
+        <template x-if="activeTab==='profile'">
+            <div class="ks-content ks-fade">
+
+                <div class="ks-profile-hero">
+                    <div class="ks-profile-avatar">
+                        @if($user->profile_photo_path)
+                            <img src="{{ asset('storage/'.$user->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
+                        @else
+                            {{ strtoupper(substr($user->full_name ?? $user->email, 0, 1)) }}
+                        @endif
+                    </div>
+                    <div class="ks-profile-name font-display">{{ $user->full_name ?? 'Cliente' }}</div>
+                    <div class="ks-profile-email">{{ $user->email }}</div>
+                    @if($kycStatus['approved'])
+                        <div style="display:inline-flex;align-items:center;gap:0.375rem;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:0.3rem 0.75rem;border-radius:20px;font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;margin-top:0.75rem;position:relative;z-index:1;">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            Identidade Aprovada
+                        </div>
+                    @endif
+                </div>
+
+                {{-- STEP 1: DADOS PESSOAIS --}}
+                <div class="ks-step {{ $kycStatus['data'] ? 'done' : 'pending' }}">
+                    <div class="ks-step__head">
+                        <div class="ks-step__num">{{ $kycStatus['data'] ? '✓' : '1' }}</div>
+                        <div class="ks-step__label">Dados Pessoais</div>
+                        <span class="ks-verify-tag {{ $kycStatus['data'] ? 'ok' : 'warn' }}">{{ $kycStatus['data'] ? 'Completo' : 'Pendente' }}</span>
+                    </div>
+                    @if(!$kycStatus['data'])
+                    <div class="ks-step__body">
+                        <form method="POST" action="{{ route('verify.data') }}">
+                            @csrf
+                            <div class="ks-form-grid">
+                                <div class="ks-form-field" style="grid-column:1/-1;">
+                                    <label>Nome Completo (igual ao BI)</label>
+                                    <input type="text" name="full_name" class="ks-form-input" value="{{ old('full_name', $user->full_name) }}" required placeholder="Ex: João Manuel da Silva">
+                                </div>
+                                <div class="ks-form-field">
+                                    <label>Data de Nascimento</label>
+                                    <input type="date" name="birth_date" class="ks-form-input" value="{{ old('birth_date', optional($user->birth_date)->format('Y-m-d')) }}" required>
+                                </div>
+                                <div class="ks-form-field">
+                                    <label>Género</label>
+                                    <select name="gender" class="ks-form-select" required>
+                                        <option value="">Selecionar</option>
+                                        <option value="M" {{ old('gender', $user->gender) === 'M' ? 'selected' : '' }}>Masculino</option>
+                                        <option value="F" {{ old('gender', $user->gender) === 'F' ? 'selected' : '' }}>Feminino</option>
+                                    </select>
+                                </div>
+                                <div class="ks-form-field">
+                                    <label>Número do BI</label>
+                                    <input type="text" name="bi_number" class="ks-form-input" value="{{ old('bi_number', $user->bi_number) }}" required placeholder="000123456LA041">
+                                </div>
+                                <div class="ks-form-field">
+                                    <label>Validade BI</label>
+                                    <input type="date" name="bi_expiry" class="ks-form-input" value="{{ old('bi_expiry', optional($user->bi_expiry)->format('Y-m-d')) }}" required>
+                                </div>
+                                <div class="ks-form-field">
+                                    <label>Província</label>
+                                    <select name="province" class="ks-form-select" required>
+                                        <option value="">Selecionar</option>
+                                        @foreach(['Huambo','Luanda','Benguela','Bié','Huíla','Malanje','Moxico','Namibe','Lunda Norte','Lunda Sul','Zaire','Cabinda','Kwanza Norte','Kwanza Sul','Bengo','Uíge','Cunene','Kuando Kubango'] as $p)
+                                            <option value="{{ $p }}" {{ old('province', $user->province) === $p ? 'selected' : '' }}>{{ $p }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="ks-form-field">
+                                    <label>Município</label>
+                                    <input type="text" name="municipality" class="ks-form-input" value="{{ old('municipality', $user->municipality) }}" required placeholder="Ex: Caála">
+                                </div>
+                                <div class="ks-form-field" style="grid-column:1/-1;">
+                                    <label>Endereço Completo</label>
+                                    <input type="text" name="address" class="ks-form-input" value="{{ old('address', $user->address) }}" required placeholder="Rua, nº, bairro">
+                                </div>
+                            </div>
+                            <button type="submit" class="ks-btn" style="margin-top:0.5rem;">Guardar Dados</button>
+                        </form>
+                    </div>
+                    @else
+                    <div class="ks-step__body">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.375rem;font-size:0.75rem;">
+                            <div><span style="color:var(--ks-faint);">BI:</span> <strong>{{ $user->bi_number }}</strong></div>
+                            <div><span style="color:var(--ks-faint);">Província:</span> <strong>{{ $user->province }}</strong></div>
+                            <div><span style="color:var(--ks-faint);">Nascimento:</span> <strong>{{ optional($user->birth_date)->format('d/m/Y') }}</strong></div>
+                            <div><span style="color:var(--ks-faint);">Género:</span> <strong>{{ $user->gender === 'M' ? 'Masculino' : 'Feminino' }}</strong></div>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+
+                {{-- STEP 2: TELEFONE --}}
+                <div class="ks-step {{ $kycStatus['phone'] ? 'done' : 'pending' }}">
+                    <div class="ks-step__head">
+                        <div class="ks-step__num">{{ $kycStatus['phone'] ? '✓' : '2' }}</div>
+                        <div class="ks-step__label">Telefone</div>
+                        <span class="ks-verify-tag {{ $kycStatus['phone'] ? 'ok' : 'warn' }}">{{ $kycStatus['phone'] ? 'Verificado' : 'Pendente' }}</span>
+                    </div>
+                    @if(!$kycStatus['phone'])
+                    <div class="ks-step__body">
+                        <form method="POST" action="{{ route('verify.phone') }}">
+                            @csrf
+                            <div class="ks-form-field">
+                                <label>Número WhatsApp</label>
+                                <input type="tel" name="phone" class="ks-form-input" value="{{ old('phone', $user->phone_number) }}" required placeholder="+244 923 456 789">
+                            </div>
+                            <button type="submit" class="ks-btn">Verificar Telefone</button>
+                        </form>
+                    </div>
+                    @else
+                    <div class="ks-step__body">
+                        <span style="font-size:0.8rem;color:var(--ks-emerald);font-weight:600;">📱 {{ $user->phone_number }}</span>
+                    </div>
+                    @endif
+                </div>
+
+                {{-- STEP 3: DOCUMENTO --}}
+                <div class="ks-step {{ $kycStatus['document'] ? 'done' : 'pending' }}">
+                    <div class="ks-step__head">
+                        <div class="ks-step__num">{{ $kycStatus['document'] ? '✓' : '3' }}</div>
+                        <div class="ks-step__label">Documento de Identidade</div>
+                        <span class="ks-verify-tag {{ $kycStatus['document'] ? 'ok' : 'warn' }}">{{ $kycStatus['document'] ? 'Enviado' : 'Em Falta' }}</span>
+                    </div>
+                    @if(!$kycStatus['document'])
+                    <div class="ks-step__body">
+                        <p style="font-size:0.75rem;color:var(--ks-muted);margin-bottom:0.75rem;line-height:1.5;">Fotografa claramente o teu BI ou Passaporte.</p>
+                        <form method="POST" action="{{ route('verify.document') }}" enctype="multipart/form-data">
+                            @csrf
+                            <div class="ks-upload" x-data="{fn:''}">
+                                <input type="file" name="document" accept=".jpg,.jpeg,.png,.pdf" @change="fn=$event.target.files[0]?.name||''" required>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--ks-faint)" stroke-width="1.5" style="margin:0 auto 0.5rem;display:block;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <div class="ks-upload__txt" x-text="fn || 'Selecionar BI ou Passaporte'"></div>
+                                <div class="ks-upload__sub">JPG, PNG ou PDF • Máx. 5MB</div>
+                            </div>
+                            <button type="submit" class="ks-btn" style="margin-top:0.75rem;">Enviar Documento</button>
+                        </form>
+                    </div>
+                    @else
+                    <div class="ks-step__body">
+                        <a href="{{ asset('storage/'.$user->identity_document_path) }}" target="_blank" style="display:inline-flex;align-items:center;gap:0.375rem;font-size:0.8rem;color:var(--ks-emerald);font-weight:600;text-decoration:none;">
+                            📄 Ver documento enviado ↗
+                        </a>
+                        @if(!$kycStatus['approved'])
+                            <span style="font-size:0.65rem;color:#1e40af;background:var(--ks-blue-light);padding:2px 7px;border-radius:20px;font-weight:700;margin-left:0.5rem;">Em análise</span>
+                        @endif
+                    </div>
+                    @endif
+                </div>
+
+                {{-- STEP 4: SELFIE --}}
+                <div class="ks-step {{ $kycStatus['photo'] ? 'done' : 'pending' }}">
+                    <div class="ks-step__head">
+                        <div class="ks-step__num">{{ $kycStatus['photo'] ? '✓' : '4' }}</div>
+                        <div class="ks-step__label">Selfie</div>
+                        <span class="ks-verify-tag {{ $kycStatus['photo'] ? 'ok' : 'warn' }}">{{ $kycStatus['photo'] ? 'Enviada' : 'Em Falta' }}</span>
+                    </div>
+                    @if(!$kycStatus['photo'])
+                    <div class="ks-step__body">
+                        <p style="font-size:0.75rem;color:var(--ks-muted);margin-bottom:0.75rem;line-height:1.5;">Tira uma selfie clara. Fundo neutro, boa iluminação.</p>
+                        <form method="POST" action="{{ route('verify.photo') }}" enctype="multipart/form-data">
+                            @csrf
+                            <div class="ks-upload" x-data="{pr:null}">
+                                <input type="file" name="photo" accept=".jpg,.jpeg,.png" capture="user" required
+                                    @change="const f=$event.target.files[0];if(f){const r=new FileReader();r.onload=e=>pr=e.target.result;r.readAsDataURL(f);}">
+                                <template x-if="pr">
+                                    <img :src="pr" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin:0 auto 0.5rem;">
+                                </template>
+                                <template x-if="!pr">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--ks-faint)" stroke-width="1.5" style="margin:0 auto 0.5rem;display:block;"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                </template>
+                                <div class="ks-upload__txt">Tirar ou selecionar selfie</div>
+                                <div class="ks-upload__sub">JPG ou PNG • Máx. 5MB</div>
+                            </div>
+                            <button type="submit" class="ks-btn" style="margin-top:0.75rem;">Enviar Selfie</button>
+                        </form>
+                    </div>
+                    @else
+                    <div class="ks-step__body" style="display:flex;align-items:center;gap:0.75rem;">
+                        <img src="{{ asset('storage/'.$user->profile_photo_path) }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--ks-emerald-light);">
+                        <span style="font-size:0.8rem;color:var(--ks-emerald);font-weight:600;">Selfie recebida ✓</span>
+                    </div>
+                    @endif
+                </div>
+
+                {{-- STEP 5: APROVAÇÃO --}}
+                <div class="ks-step {{ $kycStatus['approved'] ? 'done' : 'waiting' }}">
+                    <div class="ks-step__head">
+                        <div class="ks-step__num">{{ $kycStatus['approved'] ? '✓' : '5' }}</div>
+                        <div class="ks-step__label">Aprovação do Administrador</div>
+                        <span class="ks-verify-tag {{ $kycStatus['approved'] ? 'ok' : ($kycDone >= 4 ? 'wait' : 'warn') }}">
+                            {{ $kycStatus['approved'] ? 'Aprovado' : ($kycDone >= 4 ? 'Em Análise' : 'A Aguardar') }}
+                        </span>
+                    </div>
+                    <div class="ks-step__body">
+                        @if($kycStatus['approved'])
+                            <div style="font-size:0.8rem;color:var(--ks-emerald);font-weight:600;">✓ Aprovado em {{ $user->identity_verified_at?->format('d/m/Y') }}. Podes realizar câmbios.</div>
+                        @elseif($kycDone >= 4)
+                            <div style="font-size:0.8rem;color:#1e40af;line-height:1.6;">⏳ Documentos em análise. Demora até <strong>24h úteis</strong>. Serás notificado.</div>
+                        @else
+                            <div style="font-size:0.8rem;color:var(--ks-muted);">Completa os passos anteriores primeiro.</div>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Logout --}}
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="ks-logout-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        Terminar Sessão
+                    </button>
+                </form>
+
+                <div style="text-align:center;margin-top:1rem;font-size:0.6rem;color:var(--ks-faint);letter-spacing:0.08em;font-weight:700;text-transform:uppercase;">
+                    KwanzaSafe © 2026 • Huambo • BNA Compliant
+                </div>
+            </div>
+        </template>
+
+    </main>
+</div>
+
+{{-- BOTTOM NAV MOBILE --}}
+<nav class="ks-bottom">
+    <div class="ks-bottom__item" :class="{active:activeTab==='home'}" @click="setTab('home')">
+        <svg class="ks-bottom__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        <span class="ks-bottom__label">Início</span>
+    </div>
+    <div class="ks-bottom__item" :class="{active:activeTab==='history'}" @click="setTab('history')">
+        <svg class="ks-bottom__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        @if($unreadCount > 0)
+            <div class="ks-bottom__badge">{{ $unreadCount }}</div>
+        @else
+            <div class="ks-bottom__badge" x-show="pendingCount>0" x-text="pendingCount"></div>
+        @endif
+        <span class="ks-bottom__label">Histórico</span>
+    </div>
+    <div class="ks-bottom__item" :class="{active:activeTab==='iban'}" @click="setTab('iban')">
+        <svg class="ks-bottom__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <span class="ks-bottom__label">IBAN</span>
+    </div>
+    <div class="ks-bottom__item" :class="{active:activeTab==='support'}" @click="setTab('support')">
+        <svg class="ks-bottom__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <span class="ks-bottom__label">Suporte</span>
+    </div>
+    <div class="ks-bottom__item" :class="{active:activeTab==='profile'}" @click="setTab('profile')">
+        <svg class="ks-bottom__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        <span class="ks-bottom__label">Perfil</span>
+    </div>
+</nav>
+
+{{-- MODAL IBAN --}}
+<div class="ks-modal-bg" :class="{open:openIbanModal}" @click.self="openIbanModal=false">
+    <div class="ks-modal">
+        <div class="ks-modal__title font-display">Nova Conta Bancária</div>
+        <div class="ks-modal__sub">Apenas contas em teu nome. O titular deve coincidir com o teu BI.</div>
+
+        <form method="POST" action="{{ route('beneficiary.store') }}">
+            @csrf
+            <div class="ks-form-field">
+                <label>Banco</label>
+                <select name="bank_name" class="ks-form-select" required>
+                    <option value="">Selecionar Banco</option>
+                    @foreach(['BAI - Banco Angolano de Investimentos','BFA - Banco de Fomento Angola','BIC - Banco BIC','BPC - Banco de Poupança e Crédito','ATL - Atlântico','SOL - Banco Sol','KEVE - Banco Keve','BNI - Banco de Negócios Internacional','BMA - Millennium Atlântico','FINA - Finibanco','BCI - Banco de Comércio e Indústria'] as $b)
+                        <option value="{{ $b }}">{{ $b }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="ks-form-field">
+                <label>Número IBAN</label>
+                <input type="text" name="iban" class="ks-form-input" required placeholder="AO06 0000 0000 0000 0000 0000 0" maxlength="34" style="text-transform:uppercase;font-family:'JetBrains Mono',monospace;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="ks-form-field">
+                <label>Nome do Titular (igual ao BI)</label>
+                <input type="text" name="holder_name" class="ks-form-input" required value="{{ $user->full_name ?? '' }}">
+            </div>
+
+            <div class="ks-fraud-warn" style="margin-top:0.75rem;margin-bottom:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01"/></svg>
+                <span>O nome será validado contra o teu documento de identidade.</span>
+            </div>
+
+            <div class="ks-modal__actions">
+                <button type="button" class="ks-btn ghost" @click="openIbanModal=false">Cancelar</button>
+                <button type="submit" class="ks-btn" style="flex:2;">Guardar Conta</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function clientDashboard() {
+    return {
+        activeTab: '{{ $initialTab }}',
+        transactions: @json($txForJs),
+        kycApproved: {{ $kycStatus['approved'] ? 'true' : 'false' }},
+        openIbanModal: false,
+        filter: window.ksPersist ? window.ksPersist.loadState('client_filter', 'all') : 'all',
+        filters: [
+            {key:'all', label:'Todas'},
+            {key:'completed', label:'Concluídas'},
+            {key:'processing', label:'Em Processo'},
+            {key:'pending', label:'Pendentes'},
+            {key:'cancelled', label:'Canceladas'},
+        ],
+
+        init() {
+            // Tab inicial vem da URL (PHP já tratou disso via query string)
+            // Alpine observa mudanças e atualiza URL sem recarregar
+            this.$watch('activeTab', t => {
+                if (window.ksPersist) window.ksPersist.saveTab(t);
+            });
+
+            // Filtro persistido
+            this.$watch('filter', f => {
+                if (window.ksPersist) window.ksPersist.saveState('client_filter', f);
+            });
+
+            // Listener para botão "voltar" do browser
+            window.addEventListener('popstate', () => {
+                const urlTab = new URLSearchParams(window.location.search).get('tab') || 'home';
+                if (['home','history','iban','support','profile'].includes(urlTab)) {
+                    this.activeTab = urlTab;
+                }
+            });
+        },
+
+        setTab(t) {
+            this.activeTab = t;
+            // Scroll suave para o topo da área de conteúdo (não da página inteira)
+            const content = document.querySelector('.ks-content');
+            if (content) content.scrollTo({top: 0, behavior: 'smooth'});
+            else window.scrollTo({top: 0, behavior: 'smooth'});
+        },
+
+        get tabTitle() {
+            return {home:'Dashboard', history:'Histórico', iban:'Cofre IBAN', support:'Suporte', profile:'Perfil & KYC'}[this.activeTab] || 'KwanzaSafe';
+        },
+
+        get pendingCount() {
+            return this.transactions.filter(t => ['pending','awaiting_payment','processing'].includes(t.status)).length;
+        },
+
+        get completedCount() {
+            return this.transactions.filter(t => t.status === 'completed').length;
+        },
+
+        get totalSent() {
+            return this.transactions.filter(t => t.status === 'completed').reduce((s,t) => s + (t.amount_sent||0), 0);
+        },
+
+        get filtered() {
+            if (this.filter === 'all') return this.transactions;
+            return this.transactions.filter(t => t.status === this.filter);
+        },
+
+        formatKz(v) {
+            if (!v && v !== 0) return '0';
+            return parseFloat(v).toLocaleString('pt-PT', {minimumFractionDigits:0, maximumFractionDigits:2});
+        },
+
+        statusLabel(s) {
+            return {pending:'Pendente', awaiting_payment:'Ag. Pagamento', processing:'Em Processo', completed:'Concluído', cancelled:'Cancelado', expired:'Expirado'}[s] || s;
+        },
+
+        selectRate(id) {
+            this.scrollToCalc();
+            this.$dispatch('ks-rate', {id});
+        },
+
+        scrollToCalc() {
+            setTimeout(() => {
+                const el = document.getElementById('ks-calc');
+                if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+            }, 100);
+        },
+    };
+}
+
+function calcEngine() {
+    return {
+        rateId: '',
+        rate: 0,
+        currency: '',
+        amountSent: '',
+        amountReceived: 0,
+        submitting: false,
+        rates: @json($ratesForJs),
+
+        initCalc() {
+            window.addEventListener('ks-rate', e => {
+                this.rateId = String(e.detail.id);
+                this.recalc();
+            });
+        },
+
+        recalc() {
+            const d = this.rates[this.rateId];
+            if (d) { this.rate = d.rate; this.currency = d.currency; }
+            else { this.rate = 0; this.currency = ''; }
+            const v = parseFloat(this.amountSent);
+            this.amountReceived = (!isNaN(v) && v > 0 && this.rate > 0) ? v * this.rate : 0;
+        },
+
+        get canSubmit() {
+            const v = parseFloat(this.amountSent);
+            return this.rateId && !isNaN(v) && v >= 10 && this.rate > 0;
+        },
+
+        formatKz(v) {
+            return parseFloat(v).toLocaleString('pt-PT', {minimumFractionDigits:0, maximumFractionDigits:2});
+        },
+
+        submitTx(form) {
+            if (!this.canSubmit || this.submitting) return;
+            this.submitting = true;
+            setTimeout(() => form.submit(), 400);
+        },
+    };
+}
+</script>
+
+</div>
+</x-app-layout>

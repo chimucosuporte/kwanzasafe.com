@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /termos
+Allow: /privacidade
+
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /transaction/
+Disallow: /verify/
+Disallow: /beneficiary
+Disallow: /login
+Disallow: /register
+Disallow: /password/
+Disallow: /email/verify
+Disallow: /logout
+Disallow: /storage/kyc/
+Disallow: /storage/chat_attachments/
+
+Sitemap: https://kwanzasafe.com/sitemap.xml
