@@ -20,7 +20,13 @@ class TransactionAdminController extends Controller
         $period = $request->query('period', 'all');
         $search = $request->query('q', '');
 
-        $query = Transaction::with('user')->orderBy('created_at', 'desc');
+        $query = Transaction::with('user')
+            ->withCount(['chatMessages as unread_count' => fn($q) =>
+                $q->where('is_read', false)
+                  ->whereNotNull('sender_id')
+                  ->whereColumn('sender_id', 'transactions.user_id')
+            ])
+            ->orderBy('created_at', 'desc');
 
         if ($status === 'pending') {
             $query->whereIn('status', ['pending', 'negotiating', 'awaiting_payment', 'payment_received', 'processing', 'aoa_sent']);

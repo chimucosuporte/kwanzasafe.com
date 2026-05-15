@@ -54,6 +54,7 @@ body { background:#f5f5f5; }
 .tx-status.completed { background:#d1f2e0; color:#007a34; }
 .tx-status.cancelled, .tx-status.expired { background:#fee2e2; color:#991b1b; }
 
+.tx-unread { display:inline-flex; align-items:center; justify-content:center; background:#ef4444; color:white; font-size:0.55rem; font-weight:800; border-radius:99px; min-width:16px; height:16px; padding:0 4px; margin-left:5px; vertical-align:middle; line-height:1; }
 .tx-empty { text-align:center; padding:4rem 1.5rem; color:#a3a3a3; }
 .tx-empty__icon { font-size:3rem; margin-bottom:0.75rem; opacity:0.5; }
 .tx-empty__text { font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; }
@@ -143,7 +144,12 @@ body { background:#f5f5f5; }
                 <tbody>
                     @foreach($transactions as $tx)
                         <tr onclick="window.location='{{ route('admin.transaction.show', $tx->id) }}'">
-                            <td><span class="tx-ref">#{{ $tx->reference_id }}</span></td>
+                            <td>
+                                <span class="tx-ref">#{{ $tx->reference_id }}</span>
+                                @if($tx->unread_count > 0)
+                                    <span class="tx-unread">{{ $tx->unread_count }}</span>
+                                @endif
+                            </td>
                             <td>
                                 <div class="tx-user-cell">
                                     <div class="tx-user-avatar">{{ strtoupper(substr(optional($tx->user)->full_name ?? optional($tx->user)->email ?? '?', 0, 1)) }}</div>

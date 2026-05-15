@@ -87,6 +87,17 @@ class TransactionFlow
         Cache::forget('ks.admin.stats.all');
         Cache::forget('ks.admin.chart_data');
 
+        try {
+            $client = $transaction->fresh()->user;
+            $emailableStatuses = ['negotiating','awaiting_payment','payment_received','aoa_sent','completed','cancelled','expired'];
+            if ($client && in_array($newStatus, $emailableStatuses, true)) {
+                \Illuminate\Support\Facades\Mail::to($client->email)
+                    ->send(new \App\Mail\TransactionStatusMail($transaction, $client, $newStatus));
+            }
+        } catch (\Throwable) {
+            // Mail failure must never break a completed transition
+        }
+
         return true;
     }
 
