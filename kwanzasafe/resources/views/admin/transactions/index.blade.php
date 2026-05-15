@@ -47,8 +47,10 @@ body { background:#f5f5f5; }
 .tx-amount { font-family:'Syne',sans-serif; font-weight:800; }
 .tx-aoa { font-size:0.75rem; color:#007a34; font-weight:600; }
 .tx-status { display:inline-block; font-size:0.6rem; font-weight:800; padding:3px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.05em; }
-.tx-status.pending, .tx-status.awaiting_payment { background:#fef3c7; color:#92400e; }
-.tx-status.processing { background:#dbeafe; color:#1e40af; }
+.tx-status.pending, .tx-status.negotiating { background:#fef3c7; color:#92400e; }
+.tx-status.awaiting_payment, .tx-status.processing { background:#dbeafe; color:#1e40af; }
+.tx-status.payment_received { background:#d1fae5; color:#065f46; }
+.tx-status.aoa_sent { background:#ecfdf5; color:#064e3b; }
 .tx-status.completed { background:#d1f2e0; color:#007a34; }
 .tx-status.cancelled, .tx-status.expired { background:#fee2e2; color:#991b1b; }
 
@@ -155,7 +157,22 @@ body { background:#f5f5f5; }
                                 {{ $tx->created_at->format('d/m H:i') }}
                                 <div style="font-size:0.65rem;opacity:0.7;">{{ $tx->created_at->diffForHumans() }}</div>
                             </td>
-                            <td><span class="tx-status {{ $tx->status }}">{{ str_replace('_', ' ', $tx->status) }}</span></td>
+                            <td>
+                                @php
+                                    $stLabels = [
+                                        'pending'          => 'Pendente',
+                                        'negotiating'      => 'Negociação',
+                                        'awaiting_payment' => 'Aguarda Pag.',
+                                        'payment_received' => 'Pag. Recebido',
+                                        'processing'       => 'Em Análise',
+                                        'aoa_sent'         => 'AOA Enviados',
+                                        'completed'        => 'Concluída',
+                                        'cancelled'        => 'Cancelada',
+                                        'expired'          => 'Expirada',
+                                    ];
+                                @endphp
+                                <span class="tx-status {{ $tx->status }}">{{ $stLabels[$tx->status] ?? $tx->status }}</span>
+                            </td>
                             <td><span class="tx-amount">{{ number_format($tx->amount_sent, 2, ',', '.') }} {{ $tx->currency_from }}</span></td>
                             <td><span class="tx-aoa">{{ number_format($tx->amount_received, 0, ',', '.') }} Kz</span></td>
                         </tr>

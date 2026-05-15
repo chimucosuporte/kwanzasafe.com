@@ -362,10 +362,13 @@
                     </div>
                     <div class="ks-field-group">
                         <select x-model="currency" @change="recalc()" aria-label="Moeda de origem">
-                            <option value="EUR">🇪🇺 EUR</option>
-                            <option value="BRL">🇧🇷 BRL</option>
-                            <option value="USDC">◈ USDC</option>
-                            <option value="USDC">₮ USDC</option>
+                            @foreach($rates as $r)
+                                @php
+                                    $flags = ['EUR'=>'🇪🇺','BRL'=>'🇧🇷','USDT'=>'₮'];
+                                    $flag  = $flags[$r->currency_from] ?? '💱';
+                                @endphp
+                                <option value="{{ $r->currency_from }}">{{ $flag }} {{ $r->currency_from }}</option>
+                            @endforeach
                         </select>
                         <input type="number" x-model="amountSent" @input="recalc()" placeholder="100" min="10" step="0.01" inputmode="decimal" aria-label="Valor a enviar">
                     </div>
@@ -647,16 +650,11 @@
         // Calculadora em tempo real
         function heroCalc() {
             return {
-                rates: {
-                    EUR:  1050,
-                    BRL:  175,
-                    USDT: 950,
-                    USDC: 950,
-                },
-                currency: 'EUR',
+                rates: @json($rates->pluck('rate', 'currency_from')),
+                currency: '{{ $rates->first()?->currency_from ?? 'EUR' }}',
                 amountSent: 100,
-                rate: 1050,
-                amountReceived: 105000,
+                rate: {{ $rates->first()?->rate ?? 850 }},
+                amountReceived: {{ ($rates->first()?->rate ?? 850) * 100 }},
 
                 init() {
                     this.recalc();

@@ -142,7 +142,9 @@ class TransactionController extends Controller
             'message_text'   => 'Comprovativo de pagamento enviado pelo cliente.',
         ]);
 
-        $transaction->update(['status' => 'awaiting_payment']);
+        if ($transaction->status !== 'awaiting_payment') {
+            TransactionFlow::transition($transaction, 'awaiting_payment', Auth::user());
+        }
 
         AuditLogger::transaction('receipt_uploaded',
             "Comprovativo enviado para transação #{$transaction->reference_id}",

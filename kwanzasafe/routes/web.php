@@ -26,7 +26,10 @@ use App\Http\Controllers\OtpController;
 */
 
 // PÚBLICAS
-Route::get('/', fn() => view('welcome'))->name('home');
+Route::get('/', function () {
+    $rates = ExchangeRate::where('is_active', true)->get();
+    return view('welcome', compact('rates'));
+})->name('home');
 Route::get('/termos',      fn() => view('legal.terms'))  ->name('terms');
 Route::get('/privacidade', fn() => view('legal.privacy'))->name('privacy');
 Route::get('/sitemap.xml', function () {

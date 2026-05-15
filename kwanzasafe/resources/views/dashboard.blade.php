@@ -31,6 +31,17 @@
     $pendingCount = $transactions->whereNotIn('status', ['completed','cancelled','expired'])->count();
     $completedCount = $transactions->where('status', 'completed')->count();
 
+    // Taxas reais para a calculadora
+    $currencyMeta = [
+        'EUR'  => ['symbol' => '€',  'flag' => '🇪🇺', 'color' => '#003399'],
+        'BRL'  => ['symbol' => 'R$', 'flag' => '🇧🇷', 'color' => '#009c3b'],
+        'USDT' => ['symbol' => '$',  'flag' => '₮',  'color' => '#26a17b'],
+    ];
+    $ratesForJs = $rates->map(fn($r) => array_merge(
+        ['id' => $r->id, 'code' => $r->currency_from, 'rate' => (float) $r->rate],
+        $currencyMeta[$r->currency_from] ?? ['symbol' => '$', 'flag' => '💱', 'color' => '#009d44']
+    ))->values();
+
     // TX para JS (dashboard.blade só)
     $txForJs = $transactions->map(fn($tx) => [
         'reference_id'    => $tx->reference_id,
@@ -786,19 +797,19 @@
             
                             {{-- ============ CALCULADORA DE CÂMBIO ============ --}}
                 <div class="dc-calc" x-data="ksCalculator()" style="margin-bottom: 1.25rem;">
-                
+
                     {{-- Header da calculadora --}}
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
                         <div>
-                            <div class="dc-section__title">💱 Simular Câmbio</div>
+                            <div class="dc-section__title">💱 Iniciar Câmbio</div>
                             <div style="font-size:0.7rem; color:#737373; margin-top:1px;">
-                                Calcula quanto recebes em Kwanzas
+                                Calcula e inicia a tua transação diretamente
                             </div>
                         </div>
                     </div>
-                
+
                     <div style="background:white; border:1px solid #e5e5e5; border-radius:16px; padding:1.125rem; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-                
+
                         {{-- SELETOR DE MOEDA --}}
                         <div style="display:flex; gap:6px; margin-bottom:1rem;">
                             <template x-for="curr in currencies" :key="curr.code">
@@ -813,7 +824,7 @@
                                 </button>
                             </template>
                         </div>
-                
+
                         {{-- INPUT DE VALOR --}}
                         <div style="margin-bottom:0.75rem;">
                             <label style="display:block; font-size:0.65rem; font-weight:700; color:#737373; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.375rem;">
@@ -834,7 +845,7 @@
                                        onblur="if(!this.value) { this.style.borderColor='#e5e5e5'; this.style.background='#fafafa'; }">
                             </div>
                         </div>
-                
+
                         {{-- INDICADOR DE TAXA --}}
                         <div style="display:flex; align-items:center; justify-content:center; padding:0.5rem 0; font-size:0.7rem; color:#737373;">
                             <svg width="16" height="16" fill="none" stroke="#009d44" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right:6px;">
@@ -844,11 +855,11 @@
                             <strong style="margin: 0 4px; color:#000; font-family:'JetBrains Mono',monospace;" x-text="formatNumber(activeCurrency.rate)"></strong>
                             <span>Kz</span>
                         </div>
-                
+
                         {{-- RESULTADO --}}
                         <div style="background:linear-gradient(135deg,#000 0%,#171717 100%); border-radius:14px; padding:1rem 1.125rem; margin-top:0.5rem; position:relative; overflow:hidden;">
                             <div style="position:absolute; top:-30px; right:-30px; width:120px; height:120px; background:radial-gradient(circle, rgba(0,157,68,0.2), transparent); pointer-events:none;"></div>
-                
+
                             <div style="font-size:0.65rem; font-weight:700; color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; position:relative;">
                                 Vais receber
                             </div>
@@ -868,12 +879,43 @@
                                 Introduz um valor para simular
                             </div>
                         </div>
-                
+
+                        {{-- BOTÃO INICIAR TRANSAÇÃO --}}
+                        @if($kycStatus['approved'])
+                            <form method="POST" action="{{ route('transaction.store') }}" x-show="amount >= 10" style="margin-top:0.875rem;">
+                                @csrf
+                                <input type="hidden" name="moeda" :value="activeCurrency.id">
+                                <input type="hidden" name="valor_enviar" :value="amount">
+                                <button type="submit"
+                                        style="width:100%; background:linear-gradient(135deg,#009d44,#007a34); color:white; border:none; padding:1rem; border-radius:12px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.875rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; box-shadow:0 4px 16px rgba(0,157,68,0.3);"
+                                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,157,68,0.4)'"
+                                        onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(0,157,68,0.3)'">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                    Iniciar Transação
+                                </button>
+                            </form>
+                            <div x-show="amount > 0 && amount < 10" style="margin-top:0.75rem; font-size:0.7rem; color:#d97706; text-align:center; font-weight:600;">
+                                ⚠️ Valor mínimo: 10 <span x-text="activeCurrency.code"></span>
+                            </div>
+                        @elseif(!auth()->user()->email_verified_at)
+                            <div style="margin-top:0.875rem; background:#fef3c7; border:1px solid #f59e0b; border-radius:12px; padding:0.875rem; text-align:center; font-size:0.8rem; color:#78350f;">
+                                <strong>Verifica o teu email</strong> para iniciar transações.
+                                <a href="{{ route('otp.email.verify') }}" style="display:block; margin-top:6px; color:#92400e; font-weight:700; font-size:0.75rem;">Verificar email →</a>
+                            </div>
+                        @else
+                            <div style="margin-top:0.875rem; background:#fef3c7; border:1px solid #f59e0b; border-radius:12px; padding:0.875rem; text-align:center; font-size:0.8rem; color:#78350f;">
+                                <strong>Verificação KYC pendente.</strong> Completa para iniciar transações.
+                                <button type="button" @click="setTab('profile')" style="display:block; width:100%; margin-top:6px; background:none; border:none; color:#92400e; font-weight:700; font-size:0.75rem; cursor:pointer; text-align:center;">
+                                    Completar verificação →
+                                </button>
+                            </div>
+                        @endif
+
                         {{-- INFO TAXAS --}}
                         <div style="font-size:0.65rem; color:#a3a3a3; text-align:center; margin-top:0.75rem; line-height:1.5;">
-                            ℹ️ Taxas indicativas atualizadas hoje · Taxa real confirmada ao criar a transação
+                            ℹ️ Taxas actualizadas em tempo real · Mínimo 10 · Máximo 50.000
                         </div>
-                
+
                     </div>
                 </div>
 
@@ -1212,18 +1254,11 @@
 <script>
 function ksCalculator() {
     return {
-        // ⚠️ TAXAS HARD-CODED (mesmas do welcome.blade.php).
-        // Sprint futuro: substituir por taxas reais do admin via API.
-        currencies: [
-            { code: 'EUR',  symbol: '€', flag: '🇪🇺', rate: 1050, color: '#003399' },
-            { code: 'BRL',  symbol: 'R$', flag: '🇧🇷', rate: 175,  color: '#009c3b' },
-            { code: 'USDT', symbol: '$', flag: '₮',  rate: 950,  color: '#26a17b' },
-        ],
+        currencies: @json($ratesForJs),
         amount: 0,
         activeCurrency: null,
 
         init() {
-            // Restaurar última escolha do utilizador (se existir)
             const lastCode = localStorage.getItem('ks_calc_currency') || 'EUR';
             this.activeCurrency = this.currencies.find(c => c.code === lastCode) || this.currencies[0];
         },
