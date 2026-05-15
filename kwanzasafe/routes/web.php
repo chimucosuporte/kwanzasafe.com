@@ -73,6 +73,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/transaction/{reference_id}',         [TransactionController::class, 'show'])         ->name('transaction.show');
     Route::post('/transaction/{reference_id}/upload',  [TransactionController::class, 'uploadReceipt']) ->name('transaction.upload');
     Route::post('/transaction/{reference_id}/confirm', [TransactionController::class, 'confirmReceipt'])->name('transaction.confirm');
+    Route::post('/transaction/{reference_id}/cancel',  [TransactionController::class, 'cancel'])        ->name('transaction.cancel');
 
     Route::post('/transaction/{reference_id}/chat', [ChatController::class, 'sendMessage'])->name('chat.send');
     Route::post('/transaction/{reference_id}/read', [ChatController::class, 'markAsRead']) ->name('chat.read');
@@ -100,6 +101,7 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
     Route::post('/transaction/{id}/payment-received', [TransactionAdminController::class, 'markPaymentReceived'])->name('transaction.payment_received');
     Route::post('/transaction/{id}/aoa-sent',         [TransactionAdminController::class, 'markAoaSent'])      ->name('transaction.aoa_sent');
     Route::post('/transaction/{id}/approve',          [TransactionAdminController::class, 'approve'])          ->name('transaction.approve');
+    Route::post('/transaction/{id}/cancel',           [TransactionAdminController::class, 'cancel'])           ->name('transaction.cancel');
     Route::post('/transaction/{id}/chat',             [TransactionAdminController::class, 'sendChatMessage'])  ->name('chat.send');
     Route::get('/transaction/{id}/poll',              [TransactionAdminController::class, 'poll'])              ->name('transaction.poll');
 

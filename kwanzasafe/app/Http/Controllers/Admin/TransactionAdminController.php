@@ -149,6 +149,22 @@ class TransactionAdminController extends Controller
             ->with('success', 'Transação #' . $result['ref'] . ' concluída com sucesso.');
     }
 
+    public function cancel($id)
+    {
+        $transaction = Transaction::findOrFail($id);
+        $ref         = $transaction->reference_id;
+        $oldStatus   = $transaction->status;
+
+        $ok = TransactionFlow::transition($transaction, 'cancelled', Auth::user());
+
+        if (!$ok) {
+            return back()->with('error', "Não é possível cancelar a transação no estado actual ({$oldStatus}).");
+        }
+
+        return redirect()->route('admin.transaction.show', $id)
+            ->with('success', "Transação #{$ref} cancelada.");
+    }
+
     public function poll(Request $request, $id)
     {
         $transaction = Transaction::findOrFail($id);

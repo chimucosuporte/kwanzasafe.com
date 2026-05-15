@@ -309,6 +309,19 @@
         </div>
         @endif
 
+        {{-- Cancelar Transação (apenas pending / negotiating) --}}
+        @if(in_array($transaction->status, ['pending', 'negotiating']))
+        <div style="text-align:center;padding:0.25rem 0 0.75rem;">
+            <form method="POST" action="{{ route('transaction.cancel', $transaction->reference_id) }}"
+                  onsubmit="return confirm('Tens a certeza que queres cancelar esta transação? Esta acção não pode ser revertida.');">
+                @csrf
+                <button type="submit" style="background:none;border:none;color:#dc2626;font-size:0.8rem;font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;text-decoration:underline;padding:0;">
+                    Cancelar esta transação
+                </button>
+            </form>
+        </div>
+        @endif
+
         {{-- ===== CHAT BIDIRECIONAL ===== --}}
         <div class="tr-chat-wrap" x-data="chatRoom()" x-init="scrollToBottom()">
             <div class="tr-chat-header">

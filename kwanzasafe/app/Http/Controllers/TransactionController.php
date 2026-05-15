@@ -109,6 +109,35 @@ class TransactionController extends Controller
         return back()->with('success', 'Obrigado! A tua transação foi marcada como concluída.');
     }
 
+    public function cancel($reference_id)
+    {
+        $transaction = Transaction::where('reference_id', $reference_id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if (!in_array($transaction->status, ['pending', 'negotiating'], true)) {
+            return back()->with('error', 'Não é possível cancelar uma transação neste estado.');
+        }
+
+        $oldStatus = $transaction->status;
+        $ok = TransactionFlow::transition($transaction, 'cancelled', Auth::user());
+
+        if (!$ok) {
+            return back()->with('error', 'Não foi possível cancelar a transação.');
+        }
+
+        AuditLogger::transaction('client_cancelled',
+            "Cliente cancelou a transação #{$transaction->reference_id}",
+            $transaction,
+            ['old_status' => $oldStatus]
+        );
+
+        AdminController::clearStatsCache();
+
+        return redirect()->route('dashboard')
+            ->with('success', "Transação #{$transaction->reference_id} cancelada.");
+    }
+
     public function uploadReceipt(Request $request, $reference_id)
     {
         $request->validate([

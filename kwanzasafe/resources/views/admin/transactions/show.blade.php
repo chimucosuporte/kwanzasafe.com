@@ -438,6 +438,19 @@ body { background:#f8fafc; }
                 </div>
             @endif
 
+            {{-- Cancelar (disponível enquanto a transação for reversível) --}}
+            @if(in_array($st, ['pending', 'negotiating', 'awaiting_payment', 'payment_received', 'processing']))
+            <div style="margin-top:1rem;text-align:center;">
+                <form method="POST" action="{{ route('admin.transaction.cancel', $transaction->id) }}"
+                      onsubmit="return confirm('Cancelar a transação #{{ $transaction->reference_id }}?\nEsta acção enviará email ao cliente e não pode ser revertida.');">
+                    @csrf
+                    <button type="submit" style="background:none;border:1px solid #fca5a5;color:#dc2626;padding:0.5rem 1.25rem;border-radius:8px;font-family:\'Syne\',sans-serif;font-weight:700;font-size:0.7rem;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em;">
+                        ✕ Cancelar Transação
+                    </button>
+                </form>
+            </div>
+            @endif
+
         </div>
 
         {{-- ============ COLUNA DIREITA: CHAT ============ --}}
