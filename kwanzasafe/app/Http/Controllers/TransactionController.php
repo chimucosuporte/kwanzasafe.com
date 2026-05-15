@@ -2,29 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Transaction;
-use App\Models\ExchangeRate;
+use App\Http\Controllers\AdminController;
+use App\Http\Requests\CreateTransactionRequest;
 use App\Models\ChatMessage;
+use App\Models\ExchangeRate;
+use App\Models\Transaction;
+use App\Services\AuditLogger;
+use App\Services\TransactionFlow;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use App\Services\AuditLogger;
 
 class TransactionController extends Controller
 {
-    public function store(Request $request)
+    public function store(CreateTransactionRequest $request)
     {
         $user = Auth::user();
 
-        // Bloquear se email não verificado
         if (!$user->email_verified_at) {
             return redirect()->route('otp.email.verify')
                 ->withErrors(['email' => 'Verifica o teu email antes de criar uma transação.']);
         }
-        
-        // Regra de Ouro: Bloqueio se não estiver verificado
+
         if (!$user->phone_verified_at || !$user->identity_verified_at) {
-            // AUDIT: tentativa de transação sem KYC completo
             AuditLogger::transaction('blocked_unverified',
                 "Tentativa de transação bloqueada — KYC incompleto",
                 null,
@@ -35,19 +35,13 @@ class TransactionController extends Controller
             );
 
             return redirect()->route('dashboard')
-                ->with('error', 'Acesso negado. Conclua a verificação de identidade primeiro.');
+                ->with('error', 'Acesso negado. Conclui a verificação de identidade primeiro.');
         }
 
-        $request->validate([
-            'moeda'        => 'required|exists:exchange_rates,id',
-            'valor_enviar' => 'required|numeric|min:10',
-        ]);
-
-        $taxa = ExchangeRate::findOrFail($request->moeda);
+        $taxa         = ExchangeRate::findOrFail($request->moeda);
         $valorEnviar  = $request->valor_enviar;
-        $valorReceber = $valorEnviar * $taxa->rate;
-
-        $referenceId = 'KZ' . strtoupper(Str::random(5));
+        $valorReceber = round($valorEnviar * $taxa->rate, 2);
+        $referenceId  = 'KZ' . strtoupper(Str::random(6));
 
         $transaction = Transaction::create([
             'reference_id'     => $referenceId,
@@ -61,7 +55,12 @@ class TransactionController extends Controller
             'status'           => 'pending',
         ]);
 
-        // AUDIT: transação criada
+        // Mensagem automática de boas-vindas na sala de transação
+        TransactionFlow::systemMessage(
+            $transaction,
+            'A tua transação foi criada com sucesso. Um agente KwanzaSafe irá contactar-te aqui em breve para prosseguir com o envio.'
+        );
+
         AuditLogger::transaction('created',
             "Nova transação #{$referenceId}: {$valorEnviar} {$taxa->currency_from} → {$valorReceber} AOA",
             $transaction,
@@ -73,58 +72,89 @@ class TransactionController extends Controller
             ]
         );
 
+        AdminController::clearStatsCache();
+
         return redirect()->route('transaction.show', $transaction->reference_id);
     }
 
     public function show($reference_id)
     {
         $transaction = Transaction::where('reference_id', $reference_id)
-                                  ->where('user_id', Auth::id())
-                                  ->firstOrFail();
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
 
         return view('transaction.show', compact('transaction'));
+    }
+
+    public function confirmReceipt($reference_id)
+    {
+        $transaction = Transaction::where('reference_id', $reference_id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if ($transaction->status !== 'aoa_sent') {
+            return back()->with('error', 'Esta acção não está disponível para o estado actual da transação.');
+        }
+
+        TransactionFlow::transition($transaction, 'completed');
+
+        AuditLogger::transaction('client_confirmed',
+            "Cliente confirmou recepção dos AOA na transação #{$transaction->reference_id}",
+            $transaction,
+            ['old_status' => 'aoa_sent']
+        );
+
+        AdminController::clearStatsCache();
+
+        return back()->with('success', 'Obrigado! A tua transação foi marcada como concluída.');
     }
 
     public function uploadReceipt(Request $request, $reference_id)
     {
         $request->validate([
-            'comprovativo' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'comprovativo' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
         ]);
 
         $transaction = Transaction::where('reference_id', $reference_id)
-                                  ->where('user_id', Auth::id())
-                                  ->firstOrFail();
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
 
-        if ($request->hasFile('comprovativo')) {
-            $file = $request->file('comprovativo');
-            $path = $file->store('receipts', 'public');
+        $file      = $request->file('comprovativo');
+        $oldStatus = $transaction->status;
 
-            ChatMessage::create([
-                'transaction_id' => $transaction->id,
-                'sender_id'      => Auth::id(),
-                'message_type'   => 'document',
-                'file_path'      => $path,
-                'message_text'   => 'Comprovativo de pagamento enviado pelo cliente.',
-            ]);
-
-            $oldStatus = $transaction->status;
-            $transaction->update(['status' => 'processing']);
-
-            // AUDIT: comprovativo enviado
-            AuditLogger::transaction('receipt_uploaded',
-                "Comprovativo enviado para transação #{$transaction->reference_id}",
-                $transaction,
-                [
-                    'file_size'   => $file->getSize(),
-                    'file_mime'   => $file->getMimeType(),
-                    'old_status'  => $oldStatus,
-                    'new_status'  => 'processing',
-                ]
-            );
-
-            return back()->with('success', 'Comprovativo enviado com sucesso! A nossa equipa está a analisar.');
+        // Verificar MIME real (não apenas a extensão declarada pelo cliente)
+        $allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+        if (function_exists('finfo_open')) {
+            $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+            $realMime = $finfo->file($file->getRealPath());
+            if (!in_array($realMime, $allowedMimes, true)) {
+                return back()->withErrors(['comprovativo' => 'Tipo de ficheiro não permitido. Usa PDF, JPG ou PNG.']);
+            }
         }
 
-        return back()->withErrors(['comprovativo' => 'Erro ao enviar o ficheiro.']);
+        $path = $file->store('receipts', 'public');
+
+        ChatMessage::create([
+            'transaction_id' => $transaction->id,
+            'sender_id'      => Auth::id(),
+            'message_type'   => 'document',
+            'file_path'      => $path,
+            'message_text'   => 'Comprovativo de pagamento enviado pelo cliente.',
+        ]);
+
+        $transaction->update(['status' => 'awaiting_payment']);
+
+        AuditLogger::transaction('receipt_uploaded',
+            "Comprovativo enviado para transação #{$transaction->reference_id}",
+            $transaction,
+            [
+                'file_size'  => $file->getSize(),
+                'file_mime'  => $file->getMimeType(),
+                'old_status' => $oldStatus,
+                'new_status' => 'awaiting_payment',
+            ]
+        );
+
+        return back()->with('success', 'Comprovativo enviado com sucesso! A nossa equipa está a verificar o pagamento.');
     }
 }

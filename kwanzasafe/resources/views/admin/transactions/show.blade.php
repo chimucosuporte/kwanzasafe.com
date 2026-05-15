@@ -1,16 +1,13 @@
 <x-app-layout>
 
 @php
-    // Carregar cliente
     $client = $transaction->user ?? \App\Models\User::find($transaction->user_id);
 
-    // Carregar TODAS as mensagens
     $messages = \App\Models\ChatMessage::with('sender')
         ->where('transaction_id', $transaction->id)
         ->orderBy('created_at', 'asc')
         ->get();
 
-    // Marcar como lidas as mensagens do cliente (admin está a ver)
     \App\Models\ChatMessage::where('transaction_id', $transaction->id)
         ->where('sender_id', '!=', auth()->id())
         ->where('is_read', false)
@@ -38,10 +35,15 @@ body { background:#f8fafc; }
 /* STATUS BANNER */
 .atx-status-banner { background:white; border-radius:16px; border:1px solid #e2e8f0; padding:1.25rem 1.5rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:1rem; box-shadow:0 1px 3px rgba(0,0,0,0.03); }
 .atx-status-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.atx-status-icon.pending, .atx-status-icon.awaiting_payment { background:#fef3c7; color:#d97706; }
-.atx-status-icon.processing { background:#dbeafe; color:#1e40af; }
-.atx-status-icon.completed  { background:#d1fae5; color:#065f46; }
-.atx-status-icon.cancelled, .atx-status-icon.expired { background:#fee2e2; color:#991b1b; }
+.atx-status-icon.pending,
+.atx-status-icon.negotiating      { background:#fef3c7; color:#d97706; }
+.atx-status-icon.awaiting_payment,
+.atx-status-icon.processing       { background:#dbeafe; color:#1e40af; }
+.atx-status-icon.payment_received { background:#d1fae5; color:#059669; }
+.atx-status-icon.aoa_sent         { background:#ecfdf5; color:#065f46; }
+.atx-status-icon.completed        { background:#d1fae5; color:#065f46; }
+.atx-status-icon.cancelled,
+.atx-status-icon.expired          { background:#fee2e2; color:#991b1b; }
 .atx-status-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8; margin-bottom:2px; }
 .atx-status-value { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; color:#0f172a; }
 .atx-status-amount { margin-left:auto; text-align:right; }
@@ -87,12 +89,27 @@ body { background:#f8fafc; }
 .atx-receipt-empty { color:#94a3b8; padding:1.5rem; font-size:0.85rem; }
 
 /* ACTIONS */
-.atx-actions { background:linear-gradient(135deg,#064e3b,#047857); border-radius:16px; padding:1.5rem; color:white; margin-top:1rem; }
+.atx-actions { border-radius:16px; padding:1.5rem; color:white; margin-top:1rem; }
+.atx-actions.step-request  { background:linear-gradient(135deg,#1e40af,#2563eb); }
+.atx-actions.step-payment  { background:linear-gradient(135deg,#047857,#065f46); }
+.atx-actions.step-aoa      { background:linear-gradient(135deg,#064e3b,#047857); }
+.atx-actions.step-waiting  { background:#f0fdf4; border:2px solid #a7f3d0; color:#065f46; }
 .atx-actions__title { font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; margin-bottom:0.375rem; }
 .atx-actions__sub { font-size:0.75rem; opacity:0.75; margin-bottom:1rem; line-height:1.5; }
-.atx-btn-approve { width:100%; background:#10b981; color:white; border:none; padding:1rem; border-radius:12px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
-.atx-btn-approve:hover { background:#059669; }
+.atx-actions.step-waiting .atx-actions__sub { opacity:0.8; }
+.atx-btn-action { width:100%; color:white; border:none; padding:1rem; border-radius:12px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:filter 0.18s; }
+.atx-btn-action:hover { filter:brightness(1.12); }
+.atx-btn-action.blue    { background:#3b82f6; }
+.atx-btn-action.green   { background:#10b981; }
+.atx-btn-action.emerald { background:#059669; }
+.atx-btn-override { width:100%; margin-top:0.875rem; background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.9); padding:0.625rem; border-radius:10px; font-family:'Syne',sans-serif; font-weight:700; font-size:0.75rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em; }
+.atx-btn-override:hover { background:rgba(0,0,0,0.3); }
 .atx-completed { background:#d1fae5; color:#065f46; padding:1rem; border-radius:12px; text-align:center; font-weight:700; font-family:'Syne',sans-serif; border:2px solid #a7f3d0; }
+.atx-cancelled { background:#fee2e2; color:#991b1b; padding:1rem; border-radius:12px; text-align:center; font-weight:700; font-family:'Syne',sans-serif; border:2px solid #fca5a5; margin-top:1rem; }
+
+/* SYSTEM MESSAGE */
+.atx-sys-msg { text-align:center; padding:0.5rem 1rem; margin:0.5rem auto; max-width:80%; }
+.atx-sys-msg__text { display:inline-block; background:#f0fdf4; border:1px solid rgba(0,157,68,0.15); color:#065f46; font-size:0.72rem; font-weight:600; padding:0.375rem 0.875rem; border-radius:999px; line-height:1.4; }
 
 /* =============== CHAT =============== */
 .atx-chat-wrap { background:white; border-radius:16px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; flex-direction:column; height:calc(100vh - 200px); min-height:600px; }
@@ -146,9 +163,9 @@ body { background:#f8fafc; }
 </style>
 
 <div class="atx-topbar">
-    <a href="{{ route('admin.dashboard') }}" class="atx-topbar__back">
+    <a href="{{ route('admin.transactions.index') }}" class="atx-topbar__back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-        Painel Admin
+        Transações
     </a>
     <div style="display:flex;align-items:center;gap:0.625rem;">
         <img src="{{ asset('assets/images/logos/logo1.png') }}" class="atx-topbar__logo" alt="KwanzaSafe" onerror="this.style.display='none'">
@@ -163,19 +180,24 @@ body { background:#f8fafc; }
         <div class="atx-flash success">✓ {{ session('success') }}</div>
     @endif
     @if(session('error'))
-        <div class="atx-flash error">⚠️ {{ session('error') }}</div>
+        <div class="atx-flash error">⚠ {{ session('error') }}</div>
     @endif
     @if($errors->any())
-        <div class="atx-flash error">⚠️ {{ $errors->first() }}</div>
+        <div class="atx-flash error">⚠ {{ $errors->first() }}</div>
     @endif
 
     {{-- STATUS --}}
     <div class="atx-status-banner">
         <div class="atx-status-icon {{ $transaction->status }}">
-            @if($transaction->status === 'completed')
+            @php $st = $transaction->status; @endphp
+            @if($st === 'completed' || $st === 'payment_received')
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            @elseif($transaction->status === 'processing')
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            @elseif($st === 'cancelled' || $st === 'expired')
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            @elseif($st === 'aoa_sent')
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            @elseif($st === 'awaiting_payment' || $st === 'processing')
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             @else
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             @endif
@@ -184,12 +206,15 @@ body { background:#f8fafc; }
             <div class="atx-status-label">Estado</div>
             @php
                 $labels = [
-                    'pending' => 'A Aguardar Pagamento',
+                    'pending'          => 'A Aguardar Resposta',
+                    'negotiating'      => 'Em Negociação',
                     'awaiting_payment' => 'A Aguardar Pagamento',
-                    'processing' => 'Comprovativo em Análise',
-                    'completed' => 'Concluída — Kwanzas Enviados',
-                    'cancelled' => 'Cancelada',
-                    'expired' => 'Expirada',
+                    'payment_received' => 'Pagamento Confirmado',
+                    'processing'       => 'Comprovativo em Análise',
+                    'aoa_sent'         => 'AOA Enviados',
+                    'completed'        => 'Concluída',
+                    'cancelled'        => 'Cancelada',
+                    'expired'          => 'Expirada',
                 ];
             @endphp
             <div class="atx-status-value">{{ $labels[$transaction->status] ?? ucfirst($transaction->status) }}</div>
@@ -269,9 +294,21 @@ body { background:#f8fafc; }
                         <span class="atx-datarow__value">{{ $transaction->created_at->format('d/m/Y H:i') }}</span>
                     </div>
                     <div class="atx-datarow">
-                        <span class="atx-datarow__label">Última atualização</span>
+                        <span class="atx-datarow__label">Última actualização</span>
                         <span class="atx-datarow__value">{{ $transaction->updated_at->diffForHumans() }}</span>
                     </div>
+                    @if($transaction->payment_received_at)
+                    <div class="atx-datarow">
+                        <span class="atx-datarow__label">Pagamento recebido</span>
+                        <span class="atx-datarow__value">{{ $transaction->payment_received_at->format('d/m/Y H:i') }}</span>
+                    </div>
+                    @endif
+                    @if($transaction->aoa_sent_at)
+                    <div class="atx-datarow">
+                        <span class="atx-datarow__label">AOA enviados</span>
+                        <span class="atx-datarow__value">{{ $transaction->aoa_sent_at->format('d/m/Y H:i') }}</span>
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -309,25 +346,95 @@ body { background:#f8fafc; }
                 </div>
             </div>
 
-            {{-- Ações --}}
-            @if($transaction->status !== 'completed' && $transaction->status !== 'cancelled')
-                <div class="atx-actions">
-                    <div class="atx-actions__title">Libertar Kwanzas</div>
-                    <div class="atx-actions__sub">Após confirmar que o comprovativo é válido e corresponde ao valor esperado, aprova a transação. O cliente será notificado.</div>
+            {{-- Ações faseadas por estado --}}
+            @php $st = $transaction->status; @endphp
 
-                    <form method="POST" action="{{ route('admin.transaction.approve', $transaction->id) }}"
-                          onsubmit="return confirm('Confirmas APROVAÇÃO e libertação de {{ number_format($transaction->amount_received, 2, ',', '.') }} Kz ao cliente?');">
+            @if(in_array($st, ['pending','negotiating']))
+                {{-- Passo 1: solicitar pagamento --}}
+                <div class="atx-actions step-request">
+                    <div class="atx-actions__title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline;vertical-align:-2px;margin-right:4px;"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                        Passo 1 — Solicitar Pagamento
+                    </div>
+                    <div class="atx-actions__sub">Informa o cliente dos dados para efectuar o pagamento e muda o estado para "A Aguardar Pagamento".</div>
+                    <form method="POST" action="{{ route('admin.transaction.request_payment', $transaction->id) }}">
                         @csrf
-                        <button type="submit" class="atx-btn-approve">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            Aprovar & Libertar Kwanzas
+                        <button type="submit" class="atx-btn-action blue">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                            Solicitar Pagamento ao Cliente
                         </button>
                     </form>
                 </div>
-            @elseif($transaction->status === 'completed')
-                <div class="atx-completed">
+
+            @elseif(in_array($st, ['awaiting_payment','processing']))
+                {{-- Passo 2: confirmar pagamento recebido --}}
+                <div class="atx-actions step-payment">
+                    <div class="atx-actions__title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline;vertical-align:-2px;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Passo 2 — Confirmar Pagamento
+                    </div>
+                    <div class="atx-actions__sub">Após verificar que recebeste <strong>{{ number_format($transaction->amount_sent, 2, ',', '.') }} {{ $transaction->currency_from }}</strong> na conta KwanzaSafe, confirma aqui.</div>
+                    <form method="POST" action="{{ route('admin.transaction.payment_received', $transaction->id) }}"
+                          onsubmit="return confirm('Confirmas que recebeste {{ number_format($transaction->amount_sent, 2, ',', '.') }} {{ $transaction->currency_from }} de pagamento?');">
+                        @csrf
+                        <button type="submit" class="atx-btn-action green">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Confirmar Pagamento Recebido
+                        </button>
+                    </form>
+                </div>
+
+            @elseif($st === 'payment_received')
+                {{-- Passo 3: marcar AOA enviados --}}
+                <div class="atx-actions step-aoa">
+                    <div class="atx-actions__title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline;vertical-align:-2px;margin-right:4px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        Passo 3 — Enviar Kwanzas
+                    </div>
+                    <div class="atx-actions__sub">Após enviares <strong>{{ number_format($transaction->amount_received, 0, ',', '.') }} Kz</strong> para o IBAN do cliente, clica aqui para o notificar e pedir confirmação.</div>
+                    <form method="POST" action="{{ route('admin.transaction.aoa_sent', $transaction->id) }}"
+                          onsubmit="return confirm('Confirmas o envio de {{ number_format($transaction->amount_received, 0, ',', '.') }} Kz ao cliente?');">
+                        @csrf
+                        <button type="submit" class="atx-btn-action emerald">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            Marcar AOA como Enviados
+                        </button>
+                    </form>
+                </div>
+
+            @elseif($st === 'aoa_sent')
+                {{-- Aguardar confirmação do cliente --}}
+                <div class="atx-actions step-waiting" style="margin-top:1rem;">
+                    <div class="atx-actions__title">A aguardar confirmação</div>
+                    <div class="atx-actions__sub">O cliente recebeu notificação para confirmar a recepção dos Kwanzas. Esta etapa é da responsabilidade do cliente.</div>
+                    <div style="font-size:0.75rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;color:#059669;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        AOA enviados em {{ $transaction->aoa_sent_at?->format('d/m/Y H:i') ?? 'data desconhecida' }}
+                    </div>
+                    <div class="atx-actions step-aoa" style="margin-top:0;padding:1rem;">
+                        <div class="atx-actions__sub" style="margin-bottom:0.5rem;font-size:0.7rem;">Override de emergência — apenas se necessário</div>
+                        <form method="POST" action="{{ route('admin.transaction.approve', $transaction->id) }}"
+                              onsubmit="return confirm('Forçar conclusão sem confirmação do cliente. Tens a certeza?');">
+                            @csrf
+                            <button type="submit" class="atx-btn-override">
+                                Forçar Conclusão (admin override)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            @elseif($st === 'completed')
+                <div class="atx-completed" style="margin-top:1rem;">
                     ✓ Operação Concluída<br>
-                    <span style="font-size:0.75rem;font-weight:500;opacity:0.8;">Kwanzas libertados ao cliente.</span>
+                    <span style="font-size:0.75rem;font-weight:500;opacity:0.8;">Kwanzas libertados e confirmados pelo cliente.</span>
+                    @if($transaction->client_confirmed_at)
+                        <div style="font-size:0.7rem;margin-top:4px;opacity:0.7;">Confirmado em {{ $transaction->client_confirmed_at->format('d/m/Y H:i') }}</div>
+                    @endif
+                </div>
+
+            @elseif(in_array($st, ['cancelled','expired']))
+                <div class="atx-cancelled">
+                    ✕ Operação {{ $st === 'cancelled' ? 'Cancelada' : 'Expirada' }}
                 </div>
             @endif
 
@@ -336,9 +443,7 @@ body { background:#f8fafc; }
         {{-- ============ COLUNA DIREITA: CHAT ============ --}}
         <div>
             <div class="atx-chat-wrap" x-data="{
-                init() {
-                    this.$nextTick(() => this.scrollBottom());
-                },
+                init() { this.$nextTick(() => this.scrollBottom()); },
                 scrollBottom() {
                     const b = document.getElementById('atx-chat-body');
                     if (b) b.scrollTop = b.scrollHeight;
@@ -372,34 +477,40 @@ body { background:#f8fafc; }
                     @else
                         @foreach($messages as $msg)
                             @php
-                                $isMine = $msg->sender_id === $currentAdminId;
-                                $msgUrl = ks_file($msg->file_path);
+                                $isSystem = is_null($msg->sender_id);
+                                $isMine   = !$isSystem && $msg->sender_id === $currentAdminId;
+                                $msgUrl   = ks_file($msg->file_path);
                                 $isMsgImg = ks_is_image($msg->file_path);
                             @endphp
-                            <div class="atx-msg {{ $isMine ? 'mine' : 'client' }}">
-                                <div class="atx-msg__avatar">{{ $isMine ? 'KS' : 'CL' }}</div>
-                                <div class="atx-msg__content">
-                                    <div class="atx-msg__bubble">
-                                        @if($msg->message_text){{ $msg->message_text }}@endif
-
-                                        @if($msg->file_path && $msgUrl)
-                                            @if($isMsgImg)
-                                                <img src="{{ $msgUrl }}" alt="anexo" class="atx-msg__image" onclick="window.open(this.src,'_blank')">
-                                            @else
-                                                <a href="{{ $msgUrl }}" target="_blank" class="atx-msg__file">📎 Ver Documento</a>
+                            @if($isSystem)
+                                <div class="atx-sys-msg">
+                                    <span class="atx-sys-msg__text">{{ $msg->message_text }}</span>
+                                </div>
+                            @else
+                                <div class="atx-msg {{ $isMine ? 'mine' : 'client' }}">
+                                    <div class="atx-msg__avatar">{{ $isMine ? 'KS' : 'CL' }}</div>
+                                    <div class="atx-msg__content">
+                                        <div class="atx-msg__bubble">
+                                            @if($msg->message_text){{ $msg->message_text }}@endif
+                                            @if($msg->file_path && $msgUrl)
+                                                @if($isMsgImg)
+                                                    <img src="{{ $msgUrl }}" alt="anexo" class="atx-msg__image" onclick="window.open(this.src,'_blank')">
+                                                @else
+                                                    <a href="{{ $msgUrl }}" target="_blank" class="atx-msg__file">📎 Ver Documento</a>
+                                                @endif
                                             @endif
-                                        @endif
-                                    </div>
-                                    <div class="atx-msg__meta">
-                                        <span>{{ $msg->created_at->format('d/m H:i') }}</span>
-                                        @if($isMine && $msg->is_read)
-                                            <span style="color:#10b981;">✓✓</span>
-                                        @elseif($isMine)
-                                            <span>✓</span>
-                                        @endif
+                                        </div>
+                                        <div class="atx-msg__meta">
+                                            <span>{{ $msg->created_at->format('d/m H:i') }}</span>
+                                            @if($isMine && $msg->is_read)
+                                                <span style="color:#10b981;">✓✓</span>
+                                            @elseif($isMine)
+                                                <span>✓</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endif
                         @endforeach
                     @endif
                 </div>

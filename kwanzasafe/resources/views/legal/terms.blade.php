@@ -1,6 +1,6 @@
 @php
     $pageTitle = 'Termos de Uso';
-    $pageDescription = 'Condições gerais de utilização da plataforma KwanzaSafe — remessas internacionais de EUR, BRL e USDT para Angola.';
+    $pageDescription = 'Condições gerais de utilização da plataforma KwanzaSafe — remessas internacionais de EUR, BRL e USDC para Angola.';
     $pageKeywords = 'termos de uso KwanzaSafe, condições de serviço, AML Angola, KYC remessas, política BNA, anti-fraude';
     $pageCanonical = url('/termos');
     $lastUpdated = '22 de Abril de 2026';

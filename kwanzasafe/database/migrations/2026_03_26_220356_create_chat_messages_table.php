@@ -14,8 +14,8 @@ return new class extends Migration
             // Liga a mensagem a uma transação específica
             $table->foreignId('transaction_id')->constrained('transactions')->onDelete('cascade');
             
-            // Quem enviou a mensagem (pode ser o cliente ou o admin)
-            $table->foreignId('sender_id')->constrained('users')->onDelete('cascade');
+            // Quem enviou a mensagem (pode ser o cliente, o admin, ou null para mensagens de sistema)
+            $table->foreignId('sender_id')->nullable()->constrained('users')->onDelete('cascade');
             
             $table->text('message_text')->nullable();
             

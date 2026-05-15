@@ -22,14 +22,21 @@ class Transaction extends Model
         'fee_amount',
         'status',
         'expires_at',
+        'payment_received_at',
+        'aoa_sent_at',
+        'client_confirmed_at',
+        'admin_notes',
     ];
 
     protected $casts = [
-        'amount_sent'     => 'decimal:2',
-        'rate_applied'    => 'decimal:4',
-        'amount_received' => 'decimal:2',
-        'fee_amount'      => 'decimal:2',
-        'expires_at'      => 'datetime',
+        'amount_sent'         => 'decimal:2',
+        'rate_applied'        => 'decimal:4',
+        'amount_received'     => 'decimal:2',
+        'fee_amount'          => 'decimal:2',
+        'expires_at'          => 'datetime',
+        'payment_received_at' => 'datetime',
+        'aoa_sent_at'         => 'datetime',
+        'client_confirmed_at' => 'datetime',
     ];
 
     /**

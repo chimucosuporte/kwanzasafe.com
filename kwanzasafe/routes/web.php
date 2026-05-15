@@ -5,6 +5,11 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\TransactionAdminController;
+use App\Http\Controllers\Admin\KycAdminController;
+use App\Http\Controllers\Admin\RateAdminController;
+use App\Http\Controllers\Admin\UserAdminController;
+use App\Http\Controllers\Admin\MessageAdminController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\BeneficiaryController;
 use App\Http\Controllers\ChatController;
@@ -16,7 +21,7 @@ use App\Http\Controllers\OtpController;
 
 /*
 |--------------------------------------------------------------------------
-| KwanzaSafe — web.php (ATUALIZADO Sprint 3B — Admin Vivo)
+| KwanzaSafe — web.php
 |--------------------------------------------------------------------------
 */
 
@@ -24,6 +29,13 @@ use App\Http\Controllers\OtpController;
 Route::get('/', fn() => view('welcome'))->name('home');
 Route::get('/termos',      fn() => view('legal.terms'))  ->name('terms');
 Route::get('/privacidade', fn() => view('legal.privacy'))->name('privacy');
+Route::get('/sitemap.xml', function () {
+    $lastmod = \App\Models\ExchangeRate::orderBy('updated_at', 'desc')->value('updated_at')
+               ?? now();
+    return response()
+        ->view('sitemap', ['lastmod' => $lastmod->format('Y-m-d')])
+        ->header('Content-Type', 'application/xml; charset=utf-8');
+})->name('sitemap');
 
 // DASHBOARD CLIENTE
 Route::get('/dashboard', function () {
@@ -52,9 +64,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/verify/document', [VerificationController::class, 'uploadDocument'])    ->name('verify.document');
     Route::post('/verify/photo',    [VerificationController::class, 'uploadPhoto'])       ->name('verify.photo');
 
-    Route::post('/transaction',                       [TransactionController::class, 'store'])        ->name('transaction.store');
+    Route::post('/transaction', [TransactionController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('transaction.store');
     Route::get('/transaction/{reference_id}',         [TransactionController::class, 'show'])         ->name('transaction.show');
-    Route::post('/transaction/{reference_id}/upload', [TransactionController::class, 'uploadReceipt'])->name('transaction.upload');
+    Route::post('/transaction/{reference_id}/upload',  [TransactionController::class, 'uploadReceipt']) ->name('transaction.upload');
+    Route::post('/transaction/{reference_id}/confirm', [TransactionController::class, 'confirmReceipt'])->name('transaction.confirm');
 
     Route::post('/transaction/{reference_id}/chat', [ChatController::class, 'sendMessage'])->name('chat.send');
     Route::post('/transaction/{reference_id}/read', [ChatController::class, 'markAsRead']) ->name('chat.read');
@@ -68,34 +83,37 @@ Route::middleware('auth')->group(function () {
 });
 
 // ============ ADMIN ============
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(function () {
 
-    // Painel principal + AJAX stats
-    Route::get('/dashboard', [AdminController::class, 'index'])    ->name('dashboard');
+    // Dashboard + AJAX stats
+    Route::get('/dashboard',  [AdminController::class, 'index'])    ->name('dashboard');
     Route::get('/stats.json', [AdminController::class, 'statsJson'])->name('stats.json');
 
-    // Transações (vista filtrada + show + ações)
-    Route::get('/transactions',              [AdminController::class, 'transactionsIndex'])->name('transactions.index');
-    Route::get('/transaction/{id}',          [AdminController::class, 'show'])             ->name('transaction.show');
-    Route::post('/transaction/{id}/approve', [AdminController::class, 'approve'])          ->name('transaction.approve');
-    Route::post('/transaction/{id}/chat',    [AdminController::class, 'sendChatMessage'])  ->name('chat.send');
+    // Transações
+    Route::get('/transactions',              [TransactionAdminController::class, 'index'])          ->name('transactions.index');
+    Route::get('/transaction/{id}',                   [TransactionAdminController::class, 'show'])              ->name('transaction.show');
+    Route::post('/transaction/{id}/request-payment',  [TransactionAdminController::class, 'requestPayment'])   ->name('transaction.request_payment');
+    Route::post('/transaction/{id}/payment-received', [TransactionAdminController::class, 'markPaymentReceived'])->name('transaction.payment_received');
+    Route::post('/transaction/{id}/aoa-sent',         [TransactionAdminController::class, 'markAoaSent'])      ->name('transaction.aoa_sent');
+    Route::post('/transaction/{id}/approve',          [TransactionAdminController::class, 'approve'])          ->name('transaction.approve');
+    Route::post('/transaction/{id}/chat',             [TransactionAdminController::class, 'sendChatMessage'])  ->name('chat.send');
 
     // Utilizadores
-    Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index');
+    Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
 
     // Mensagens
-    Route::get('/messages/unread', [AdminController::class, 'unreadMessages'])->name('messages.unread');
+    Route::get('/messages/unread', [MessageAdminController::class, 'unread'])->name('messages.unread');
 
     // Taxas
-    Route::get('/rates',           [AdminController::class, 'ratesIndex']) ->name('rates.index');
-    Route::get('/rates/{id}/edit', [AdminController::class, 'ratesEdit'])  ->name('rates.edit');
-    Route::put('/rates/{id}',      [AdminController::class, 'ratesUpdate'])->name('rates.update');
+    Route::get('/rates',           [RateAdminController::class, 'index']) ->name('rates.index');
+    Route::get('/rates/{id}/edit', [RateAdminController::class, 'edit'])  ->name('rates.edit');
+    Route::put('/rates/{id}',      [RateAdminController::class, 'update'])->name('rates.update');
 
     // KYC
-    Route::get('/kyc',                   [AdminController::class, 'kycIndex'])  ->name('kyc.index');
-    Route::get('/kyc/{userId}',          [AdminController::class, 'kycShow'])   ->name('kyc.show');
-    Route::post('/kyc/{userId}/approve', [AdminController::class, 'kycApprove'])->name('kyc.approve');
-    Route::post('/kyc/{userId}/reject',  [AdminController::class, 'kycReject']) ->name('kyc.reject');
+    Route::get('/kyc',                   [KycAdminController::class, 'index'])  ->name('kyc.index');
+    Route::get('/kyc/{userId}',          [KycAdminController::class, 'show'])   ->name('kyc.show');
+    Route::post('/kyc/{userId}/approve', [KycAdminController::class, 'approve'])->name('kyc.approve');
+    Route::post('/kyc/{userId}/reject',  [KycAdminController::class, 'reject']) ->name('kyc.reject');
 
     // Audit Trail
     Route::get('/audit',               [AuditController::class, 'index'])->name('audit.index');

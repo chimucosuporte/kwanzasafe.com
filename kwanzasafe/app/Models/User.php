@@ -13,7 +13,7 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'full_name', 'email', 'password', 'balance',
+        'full_name', 'name', 'email', 'password', 'balance',
         'phone_number', 'phone_verified_at',
         'birth_date', 'gender', 'bi_number', 'bi_expiry',
         'province', 'municipality', 'address',
@@ -51,6 +51,20 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'birth_date'          => 'date',
         'bi_expiry'           => 'date',
     ];
+
+    // ============================================================
+    // Accessors / Mutators
+    // ============================================================
+
+    public function getNameAttribute(): ?string
+    {
+        return $this->full_name;
+    }
+
+    public function setNameAttribute($value): void
+    {
+        $this->attributes['full_name'] = $value;
+    }
 
     // ============================================================
     // Relações

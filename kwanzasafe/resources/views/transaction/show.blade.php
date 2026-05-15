@@ -33,10 +33,20 @@
 .tr-content { max-width:800px; margin:0 auto; padding:1.5rem; }
 .tr-status-bar { background:white; border-radius:1.25rem; border:1px solid #e2e8f0; box-shadow:0 4px 24px rgba(6,78,59,0.06); padding:1.25rem 1.5rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:1rem; }
 .tr-status-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.tr-status-icon.pending    { background:#fffbeb; color:#d97706; }
-.tr-status-icon.processing { background:#eff6ff; color:#2563eb; }
-.tr-status-icon.completed  { background:#ecfdf5; color:#064e3b; }
-.tr-status-icon.cancelled  { background:#fee2e2; color:#dc2626; }
+.tr-status-icon.pending          { background:#fffbeb; color:#d97706; }
+.tr-status-icon.negotiating      { background:#f0fdf4; color:#009d44; }
+.tr-status-icon.awaiting_payment { background:#eff6ff; color:#2563eb; }
+.tr-status-icon.payment_received { background:#f0fdf4; color:#065f46; }
+.tr-status-icon.processing       { background:#eff6ff; color:#2563eb; }
+.tr-status-icon.aoa_sent         { background:#ecfdf5; color:#059669; }
+.tr-status-icon.completed        { background:#ecfdf5; color:#064e3b; }
+.tr-status-icon.cancelled        { background:#fee2e2; color:#dc2626; }
+.tr-status-icon.expired          { background:#f5f5f5; color:#737373; }
+.tr-confirm-btn { width:100%; background:linear-gradient(135deg,#009d44,#007a34); color:white; border:none; padding:1.125rem; border-radius:14px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.625rem; transition:all 0.2s; box-shadow:0 6px 20px rgba(0,157,68,0.3); }
+.tr-confirm-btn:hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,157,68,0.4); }
+.tr-confirm-btn:active { transform:translateY(0); }
+.tr-sys-msg { text-align:center; padding:0.5rem 1rem; margin:0.5rem auto; max-width:80%; }
+.tr-sys-msg__text { display:inline-block; background:#f0fdf4; border:1px solid rgba(0,157,68,0.15); color:#065f46; font-size:0.75rem; font-weight:600; padding:0.375rem 0.875rem; border-radius:999px; line-height:1.4; }
 .tr-status-label { font-size:0.625rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8; }
 .tr-status-value { font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; color:#0f172a; }
 .tr-ref-badge { margin-left:auto; background:#064e3b; color:white; padding:0.375rem 0.875rem; border-radius:20px; font-family:'Syne',sans-serif; font-size:0.7rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; }
@@ -146,13 +156,27 @@
         {{-- Status Bar --}}
         <div class="tr-status-bar">
             <div class="tr-status-icon {{ $transaction->status }}">
-                @if($transaction->status === 'completed')
+                @php $st = $transaction->status; @endphp
+                @if($st === 'completed')
+                    {{-- check circle --}}
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                @elseif($transaction->status === 'processing')
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                @elseif($transaction->status === 'cancelled')
+                @elseif($st === 'cancelled' || $st === 'expired')
+                    {{-- X circle --}}
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                @elseif($st === 'awaiting_payment' || $st === 'processing')
+                    {{-- credit card / upload --}}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                @elseif($st === 'payment_received')
+                    {{-- shield check --}}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                @elseif($st === 'aoa_sent')
+                    {{-- send arrow --}}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                @elseif($st === 'negotiating')
+                    {{-- chat bubble --}}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 @else
+                    {{-- clock (pending / default) --}}
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 @endif
             </div>
@@ -161,9 +185,12 @@
                 <div class="tr-status-value">
                     @php
                         $statusLabels = [
-                            'pending'          => 'A Aguardar Pagamento',
+                            'pending'          => 'Aguarda Confirmação do Agente',
+                            'negotiating'      => 'Em Negociação com o Agente',
                             'awaiting_payment' => 'A Aguardar Pagamento',
+                            'payment_received' => 'Pagamento Confirmado',
                             'processing'       => 'Comprovativo em Análise',
+                            'aoa_sent'         => 'Kwanzas Enviados — Confirma Recepção',
                             'completed'        => 'Concluída — Kwanzas Enviados!',
                             'cancelled'        => 'Operação Cancelada',
                             'expired'          => 'Operação Expirada',
@@ -195,8 +222,8 @@
             </div>
         </div>
 
-        {{-- Dados Bancários para Pagamento (apenas se pendente) --}}
-        @if(in_array($transaction->status, ['pending', 'awaiting_payment']))
+        {{-- Dados Bancários para Pagamento --}}
+        @if(in_array($transaction->status, ['pending', 'negotiating', 'awaiting_payment']))
         <div class="tr-card">
             <div class="tr-card__title">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
@@ -238,7 +265,7 @@
         @endif
 
         {{-- Upload Comprovativo --}}
-        @if(in_array($transaction->status, ['pending', 'awaiting_payment']))
+        @if(in_array($transaction->status, ['pending', 'negotiating', 'awaiting_payment']))
         <div class="tr-card">
             <div class="tr-card__title">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -256,6 +283,27 @@
                 <button type="submit" class="tr-upload-btn">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Enviar Comprovativo
+                </button>
+            </form>
+        </div>
+        @endif
+
+        {{-- Confirmar Recepção dos Kwanzas (apenas quando aoa_sent) --}}
+        @if($transaction->status === 'aoa_sent')
+        <div class="tr-card">
+            <div class="tr-card__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Confirma a Recepção
+            </div>
+            <div class="tr-alert info" style="margin-bottom:1.25rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/></svg>
+                <span>O nosso agente indica que os Kwanzas foram enviados. Confirma quando o valor estiver disponível na tua conta.</span>
+            </div>
+            <form method="POST" action="{{ route('transaction.confirm', $transaction->reference_id) }}">
+                @csrf
+                <button type="submit" class="tr-confirm-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Confirmar Recepção dos Kwanzas
                 </button>
             </form>
         </div>
@@ -280,40 +328,46 @@
                 @else
                     @foreach($messages as $msg)
                         @php
-                            $isMine  = $msg->sender_id === $currentUserId;
-                            $isAdmin = !$isMine;
+                            $isSystem = is_null($msg->sender_id);
+                            $isMine   = !$isSystem && $msg->sender_id === $currentUserId;
                         @endphp
-                        <div class="tr-msg {{ $isMine ? 'mine' : 'admin' }}">
-                            <div class="tr-msg__avatar">
-                                {{ $isMine ? 'EU' : 'KS' }}
+                        @if($isSystem)
+                            <div class="tr-sys-msg">
+                                <span class="tr-sys-msg__text">{{ $msg->message_text }}</span>
                             </div>
-                            <div class="tr-msg__content">
-                                <div class="tr-msg__bubble">
-                                    @if($msg->message_text)
-                                        {{ $msg->message_text }}
-                                    @endif
-
-                                    @if($msg->file_path)
-                                        @if($msg->is_image)
-                                            <img src="{{ $msg->file_url }}" alt="anexo" class="tr-msg__image" onclick="window.open(this.src,'_blank')">
-                                        @else
-                                            <a href="{{ $msg->file_url }}" target="_blank" class="tr-msg__file">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 9V5a3 3 0 013-3v0a3 3 0 013 3v10a5 5 0 01-10 0V9a1 1 0 012 0v6a3 3 0 006 0V5a1 1 0 00-2 0v4"/></svg>
-                                                Ver Documento
-                                            </a>
+                        @else
+                            <div class="tr-msg {{ $isMine ? 'mine' : 'admin' }}">
+                                <div class="tr-msg__avatar">
+                                    {{ $isMine ? 'EU' : 'KS' }}
+                                </div>
+                                <div class="tr-msg__content">
+                                    <div class="tr-msg__bubble">
+                                        @if($msg->message_text)
+                                            {{ $msg->message_text }}
                                         @endif
-                                    @endif
-                                </div>
-                                <div class="tr-msg__meta">
-                                    <span>{{ $msg->created_at->format('d/m H:i') }}</span>
-                                    @if($isMine && $msg->is_read)
-                                        <span style="color:#10b981;" title="Lida pelo admin">✓✓</span>
-                                    @elseif($isMine)
-                                        <span style="color:#94a3b8;" title="Enviada">✓</span>
-                                    @endif
+
+                                        @if($msg->file_path)
+                                            @if($msg->is_image)
+                                                <img src="{{ $msg->file_url }}" alt="anexo" class="tr-msg__image" onclick="window.open(this.src,'_blank')">
+                                            @else
+                                                <a href="{{ $msg->file_url }}" target="_blank" class="tr-msg__file">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 9V5a3 3 0 013-3v0a3 3 0 013 3v10a5 5 0 01-10 0V9a1 1 0 012 0v6a3 3 0 006 0V5a1 1 0 00-2 0v4"/></svg>
+                                                    Ver Documento
+                                                </a>
+                                            @endif
+                                        @endif
+                                    </div>
+                                    <div class="tr-msg__meta">
+                                        <span>{{ $msg->created_at->format('d/m H:i') }}</span>
+                                        @if($isMine && $msg->is_read)
+                                            <span style="color:#10b981;" title="Lida pelo admin">✓✓</span>
+                                        @elseif($isMine)
+                                            <span style="color:#94a3b8;" title="Enviada">✓</span>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        @endif
                     @endforeach
                 @endif
             </div>

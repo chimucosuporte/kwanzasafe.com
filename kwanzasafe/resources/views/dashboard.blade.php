@@ -367,8 +367,11 @@
     }
     .dc-tx-card__icon.completed { background:#d1f2e0; color:#007a34; }
     .dc-tx-card__icon.pending,
+    .dc-tx-card__icon.negotiating,
     .dc-tx-card__icon.awaiting_payment,
     .dc-tx-card__icon.processing { background:#fef3c7; color:#92400e; }
+    .dc-tx-card__icon.payment_received,
+    .dc-tx-card__icon.aoa_sent { background:#d1fae5; color:#065f46; }
     .dc-tx-card__icon.cancelled,
     .dc-tx-card__icon.expired { background:#fee2e2; color:#991b1b; }
 
@@ -391,8 +394,11 @@
     }
     .dc-tx-card__status.completed { background:#d1f2e0; color:#007a34; }
     .dc-tx-card__status.pending,
+    .dc-tx-card__status.negotiating,
     .dc-tx-card__status.awaiting_payment,
     .dc-tx-card__status.processing { background:#fef3c7; color:#92400e; }
+    .dc-tx-card__status.payment_received,
+    .dc-tx-card__status.aoa_sent { background:#d1fae5; color:#065f46; }
     .dc-tx-card__status.cancelled,
     .dc-tx-card__status.expired { background:#fee2e2; color:#991b1b; }
 
@@ -937,8 +943,8 @@
                         <a href="{{ route('transaction.show', $tx->reference_id) }}" class="dc-tx-card">
                             <div class="dc-tx-card__icon {{ $tx->status }}">
                                 @if($tx->status === 'completed') ✓
-                                @elseif(in_array($tx->status, ['pending','awaiting_payment','processing'])) ⏳
-                                @else ✕ @endif
+                                @elseif(in_array($tx->status, ['cancelled','expired'])) ✕
+                                @else ⏳ @endif
                             </div>
                             <div class="dc-tx-card__info">
                                 <div class="dc-tx-card__ref">#{{ $tx->reference_id }}</div>
@@ -980,7 +986,7 @@
             <template x-for="tx in filteredTransactions" :key="tx.reference_id">
                 <a :href="tx.url" class="dc-tx-card">
                     <div class="dc-tx-card__icon" :class="tx.status">
-                        <span x-text="tx.status === 'completed' ? '✓' : (['pending','awaiting_payment','processing'].includes(tx.status) ? '⏳' : '✕')"></span>
+                        <span x-text="tx.status === 'completed' ? '✓' : (['cancelled','expired'].includes(tx.status) ? '✕' : '⏳')"></span>
                     </div>
                     <div class="dc-tx-card__info">
                         <div class="dc-tx-card__ref" x-text="'#' + tx.reference_id"></div>
@@ -1252,10 +1258,9 @@ function clientDashboard() {
         // Filtros
         filter: window.ksPersist ? window.ksPersist.loadState('client_filter', 'all') : 'all',
         filters: [
-            {key: 'all', label: 'Todas'},
+            {key: 'all',       label: 'Todas'},
             {key: 'completed', label: 'Concluídas'},
-            {key: 'processing', label: 'Em Processo'},
-            {key: 'pending', label: 'Pendentes'},
+            {key: 'pending',   label: 'Em Curso'},
             {key: 'cancelled', label: 'Canceladas'},
         ],
 
@@ -1307,7 +1312,7 @@ function clientDashboard() {
                 return this.transactions.filter(tx => ['cancelled','expired'].includes(tx.status));
             }
             if (this.filter === 'pending') {
-                return this.transactions.filter(tx => ['pending','awaiting_payment'].includes(tx.status));
+                return this.transactions.filter(tx => !['completed','cancelled','expired'].includes(tx.status));
             }
             return this.transactions.filter(tx => tx.status === this.filter);
         },

@@ -2,20 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreBeneficiaryRequest;
 use App\Models\Beneficiary;
-use Illuminate\Support\Facades\Auth;
 use App\Services\AuditLogger;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BeneficiaryController extends Controller
 {
-    public function store(Request $request)
+    public function store(StoreBeneficiaryRequest $request)
     {
-        $request->validate([
-            'bank_name'   => 'required|string|max:100',
-            'iban'        => 'required|string|min:10|max:34',
-            'holder_name' => 'required|string|max:150',
-        ]);
 
         $user = Auth::user();
 

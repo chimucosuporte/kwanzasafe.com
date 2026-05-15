@@ -47,7 +47,15 @@ class ChatController extends Controller
 
         // Processar ficheiro anexado se existir
         if ($request->hasFile('attachment')) {
-            $file = $request->file('attachment');
+            $file          = $request->file('attachment');
+            $allowedMimes  = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+            if (function_exists('finfo_open')) {
+                $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+                $realMime = $finfo->file($file->getRealPath());
+                if (!in_array($realMime, $allowedMimes, true)) {
+                    return back()->withErrors(['attachment' => 'Tipo de ficheiro não permitido.']);
+                }
+            }
             $path = $file->store('chat_attachments', 'public');
             $data['file_path']    = $path;
 

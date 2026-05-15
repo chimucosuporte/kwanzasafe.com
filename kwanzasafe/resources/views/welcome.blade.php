@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {{-- ============ SEO PRIMARY ============ --}}
-    <title>KwanzaSafe — Envia Euros, Reais e USDT para Angola com Segurança</title>
-    <meta name="description" content="Carteira internacional para remessas seguras para Angola. Converte Euros (EUR), Reais Brasileiros (BRL), USDT e USDC em Kwanzas (AOA) com rapidez e total confiança.">
-    <meta name="keywords" content="enviar dinheiro para Angola, remessa Angola, câmbio Kwanza, EUR para AOA, BRL para Kwanza, USDT Angola, USDC Angola, carteira internacional, remessa segura, cambio online Angola">
+    <title>KwanzaSafe — Envia Euros, Reais e USDC para Angola com Segurança</title>
+    <meta name="description" content="Carteira internacional para remessas seguras para Angola. Converte Euros (EUR), Reais Brasileiros (BRL) e USDC em Kwanzas (AOA) com rapidez e total confiança.">
+    <meta name="keywords" content="enviar dinheiro para Angola, remessa Angola, câmbio Kwanza, EUR para AOA, BRL para Kwanza, USDC Angola, carteira internacional, remessa segura, cambio online Angola">
     <meta name="author" content="KwanzaSafe">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://kwanzasafe.com/">
@@ -18,8 +18,8 @@
     <meta property="og:locale" content="pt_AO">
     <meta property="og:url" content="https://kwanzasafe.com/">
     <meta property="og:site_name" content="KwanzaSafe">
-    <meta property="og:title" content="KwanzaSafe — Envia Euros, Reais e USDT para Angola">
-    <meta property="og:description" content="Conversão segura de Euros, Reais e USDT para Kwanzas — do mundo para Angola, com rapidez e total confiança.">
+    <meta property="og:title" content="KwanzaSafe — Envia Euros, Reais e USDC para Angola">
+    <meta property="og:description" content="Conversão segura de Euros, Reais e USDC para Kwanzas — do mundo para Angola, com rapidez e total confiança.">
     <meta property="og:image" content="{{ asset('assets/images/logos/logo1.png') }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -27,7 +27,7 @@
     {{-- ============ TWITTER CARD ============ --}}
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="KwanzaSafe — Remessas Internacionais para Angola">
-    <meta name="twitter:description" content="Envia Euros, Reais e USDT para Angola de forma segura e rápida. Conversão transparente em Kwanzas.">
+    <meta name="twitter:description" content="Envia Euros, Reais e USDC para Angola de forma segura e rápida. Conversão transparente em Kwanzas.">
     <meta name="twitter:image" content="{{ asset('assets/images/logos/logo1.png') }}">
 
     {{-- ============ SCHEMA.ORG / JSON-LD ============ --}}
@@ -36,7 +36,7 @@
       "@context": "https://schema.org",
       "@type": "FinancialService",
       "name": "KwanzaSafe",
-      "description": "Carteira internacional para remessas seguras do mundo para Angola. Converte Euros, Reais e USDT em Kwanzas.",
+      "description": "Carteira internacional para remessas seguras do mundo para Angola. Converte Euros, Reais e USDC em Kwanzas.",
       "url": "https://kwanzasafe.com",
       "logo": "{{ asset('assets/images/logos/logo1.png') }}",
       "image": "{{ asset('assets/images/logos/logo1.png') }}",
@@ -57,7 +57,7 @@
         "Conversão de Criptomoedas",
         "EUR para AOA",
         "BRL para AOA",
-        "USDT para AOA"
+        "USDC para AOA"
       ],
       "sameAs": [
         "https://wa.me/5511933579009"
@@ -310,11 +310,11 @@
                 <span class="ks-hero-badge">🌍 Plataforma Internacional</span>
 
                 <h1 class="ks-hero-title">
-                    Envia <span class="highlight">Euros, Reais e USDT</span> para Angola com segurança.
+                    Envia <span class="highlight">Euros, Reais e USDC</span> para Angola com segurança.
                 </h1>
 
                 <p class="ks-hero-sub">
-                    Conversão segura de Euros, Reais e USDT para Kwanzas — do mundo para Angola, com rapidez e total confiança. Soluções modernas para pagamentos internacionais, com segurança, eficiência e suporte profissional.
+                    Conversão segura de Euros, Reais e USDC para Kwanzas — do mundo para Angola, com rapidez e total confiança. Soluções modernas para pagamentos internacionais, com segurança, eficiência e suporte profissional.
                 </p>
 
                 <div class="ks-hero-ctas">
@@ -364,7 +364,7 @@
                         <select x-model="currency" @change="recalc()" aria-label="Moeda de origem">
                             <option value="EUR">🇪🇺 EUR</option>
                             <option value="BRL">🇧🇷 BRL</option>
-                            <option value="USDT">₮ USDT</option>
+                            <option value="USDC">◈ USDC</option>
                             <option value="USDC">₮ USDC</option>
                         </select>
                         <input type="number" x-model="amountSent" @input="recalc()" placeholder="100" min="10" step="0.01" inputmode="decimal" aria-label="Valor a enviar">
