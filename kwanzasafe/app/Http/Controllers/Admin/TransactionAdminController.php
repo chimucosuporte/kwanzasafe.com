@@ -149,6 +149,41 @@ class TransactionAdminController extends Controller
             ->with('success', 'Transação #' . $result['ref'] . ' concluída com sucesso.');
     }
 
+    public function poll(Request $request, $id)
+    {
+        $transaction = Transaction::findOrFail($id);
+        $afterId     = max(0, (int) $request->query('after', 0));
+        $adminId     = Auth::id();
+
+        $messages = ChatMessage::where('transaction_id', $transaction->id)
+            ->where('id', '>', $afterId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($messages->isNotEmpty()) {
+            ChatMessage::where('transaction_id', $transaction->id)
+                ->where('id', '>', $afterId)
+                ->whereNotNull('sender_id')
+                ->where('sender_id', '!=', $adminId)
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+        }
+
+        return response()->json([
+            'messages' => $messages->map(fn($msg) => [
+                'id'        => $msg->id,
+                'text'      => $msg->message_text,
+                'type'      => $msg->message_type,
+                'is_mine'   => !is_null($msg->sender_id) && $msg->sender_id === $adminId,
+                'is_system' => is_null($msg->sender_id),
+                'file_url'  => $msg->file_path ? ks_file($msg->file_path) : null,
+                'is_image'  => $msg->file_path ? ks_is_image($msg->file_path) : false,
+                'time'      => $msg->created_at->format('d/m H:i'),
+                'is_read'   => (bool) $msg->is_read,
+            ]),
+        ]);
+    }
+
     public function sendChatMessage(SendChatMessageRequest $request, $id)
     {
         $transaction = Transaction::findOrFail($id);

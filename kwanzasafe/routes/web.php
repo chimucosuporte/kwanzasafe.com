@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/transaction/{reference_id}/chat', [ChatController::class, 'sendMessage'])->name('chat.send');
     Route::post('/transaction/{reference_id}/read', [ChatController::class, 'markAsRead']) ->name('chat.read');
+    Route::get('/transaction/{reference_id}/poll',  [ChatController::class, 'poll'])       ->name('chat.poll');
 
     Route::post('/beneficiary',        [BeneficiaryController::class, 'store'])  ->name('beneficiary.store');
     Route::delete('/beneficiary/{id}', [BeneficiaryController::class, 'destroy'])->name('beneficiary.destroy');
@@ -100,6 +101,7 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
     Route::post('/transaction/{id}/aoa-sent',         [TransactionAdminController::class, 'markAoaSent'])      ->name('transaction.aoa_sent');
     Route::post('/transaction/{id}/approve',          [TransactionAdminController::class, 'approve'])          ->name('transaction.approve');
     Route::post('/transaction/{id}/chat',             [TransactionAdminController::class, 'sendChatMessage'])  ->name('chat.send');
+    Route::get('/transaction/{id}/poll',              [TransactionAdminController::class, 'poll'])              ->name('transaction.poll');
 
     // Utilizadores
     Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');

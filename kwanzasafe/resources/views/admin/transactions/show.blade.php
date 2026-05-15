@@ -442,17 +442,7 @@ body { background:#f8fafc; }
 
         {{-- ============ COLUNA DIREITA: CHAT ============ --}}
         <div>
-            <div class="atx-chat-wrap" x-data="{
-                init() { this.$nextTick(() => this.scrollBottom()); },
-                scrollBottom() {
-                    const b = document.getElementById('atx-chat-body');
-                    if (b) b.scrollTop = b.scrollHeight;
-                },
-                setQuick(text) {
-                    const t = document.querySelector('#atx-textarea');
-                    if (t) { t.value = text; t.focus(); }
-                }
-            }">
+            <div class="atx-chat-wrap" x-data="adminChat()">
                 <div class="atx-chat-header">
                     <div class="atx-chat-header__avatar">
                         @if($client && ks_file($client->profile_photo_path))
@@ -557,5 +547,100 @@ body { background:#f8fafc; }
         </div>
     </div>
 </div>
+
+<script>
+function adminChat() {
+    return {
+        lastId: {{ $messages->max('id') ?? 0 }},
+        _timer: null,
+
+        init() {
+            this.$nextTick(() => this.scrollBottom());
+            this._timer = setInterval(() => this.poll(), 5000);
+        },
+
+        destroy() { clearInterval(this._timer); },
+
+        scrollBottom() {
+            const b = document.getElementById('atx-chat-body');
+            if (b) b.scrollTop = b.scrollHeight;
+        },
+
+        setQuick(text) {
+            const t = document.querySelector('#atx-textarea');
+            if (t) { t.value = text; t.focus(); }
+        },
+
+        async poll() {
+            try {
+                const r = await fetch('{{ route('admin.transaction.poll', $transaction->id) }}?after=' + this.lastId, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                });
+                if (!r.ok) return;
+                const { messages } = await r.json();
+                if (!messages || !messages.length) return;
+                const hasNewFromClient = messages.some(m => !m.is_mine && !m.is_system);
+                this.appendMessages(messages);
+                this.lastId = messages[messages.length - 1].id;
+                this.scrollBottom();
+                if (hasNewFromClient) this.playSound();
+            } catch (e) {}
+        },
+
+        appendMessages(messages) {
+            const body = document.getElementById('atx-chat-body');
+            const empty = body.querySelector('.atx-chat-empty');
+            if (empty) empty.remove();
+            messages.forEach(msg => {
+                const w = document.createElement('div');
+                w.innerHTML = this.buildMessage(msg).trim();
+                body.appendChild(w.firstElementChild);
+            });
+        },
+
+        buildMessage(msg) {
+            if (msg.is_system) {
+                return `<div class="atx-sys-msg"><span class="atx-sys-msg__text">${this.esc(msg.text)}</span></div>`;
+            }
+            const side     = msg.is_mine ? 'mine' : 'client';
+            const initials = msg.is_mine ? 'KS' : 'CL';
+            let body = '';
+            if (msg.text) body += this.esc(msg.text);
+            if (msg.file_url) {
+                if (msg.is_image) {
+                    body += `<img src="${msg.file_url}" class="atx-msg__image" onclick="window.open(this.src,'_blank')">`;
+                } else {
+                    body += `<a href="${msg.file_url}" target="_blank" class="atx-msg__file">📎 Ver Documento</a>`;
+                }
+            }
+            const tick = msg.is_mine
+                ? `<span style="color:${msg.is_read ? '#10b981' : '#94a3b8'};">${msg.is_read ? '✓✓' : '✓'}</span>`
+                : '';
+            return `<div class="atx-msg ${side}">
+                <div class="atx-msg__avatar">${initials}</div>
+                <div class="atx-msg__content">
+                    <div class="atx-msg__bubble">${body}</div>
+                    <div class="atx-msg__meta"><span>${msg.time}</span>${tick}</div>
+                </div>
+            </div>`;
+        },
+
+        esc(str) {
+            if (!str) return '';
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML.replace(/\n/g, '<br>');
+        },
+
+        playSound() {
+            try {
+                const a = new Audio('{{ asset('assets/sounds/notify.wav') }}');
+                a.volume = 0.5;
+                a.play().catch(() => {});
+            } catch (e) {}
+        },
+    };
+}
+</script>
 
 </x-app-layout>

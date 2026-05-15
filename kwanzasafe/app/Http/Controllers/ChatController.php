@@ -89,6 +89,46 @@ class ChatController extends Controller
     }
 
     /**
+     * Polling AJAX — devolve mensagens novas desde after_id e marca-as como lidas.
+     */
+    public function poll(Request $request, $reference_id)
+    {
+        $transaction = Transaction::where('reference_id', $reference_id)
+                                  ->where('user_id', Auth::id())
+                                  ->firstOrFail();
+
+        $afterId = max(0, (int) $request->query('after', 0));
+        $userId  = Auth::id();
+
+        $messages = ChatMessage::where('transaction_id', $transaction->id)
+            ->where('id', '>', $afterId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($messages->isNotEmpty()) {
+            ChatMessage::where('transaction_id', $transaction->id)
+                ->where('id', '>', $afterId)
+                ->where(fn($q) => $q->whereNull('sender_id')->orWhere('sender_id', '!=', $userId))
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+        }
+
+        return response()->json([
+            'messages' => $messages->map(fn($msg) => [
+                'id'        => $msg->id,
+                'text'      => $msg->message_text,
+                'type'      => $msg->message_type,
+                'is_mine'   => !is_null($msg->sender_id) && $msg->sender_id === $userId,
+                'is_system' => is_null($msg->sender_id),
+                'file_url'  => $msg->file_path ? ks_file($msg->file_path) : null,
+                'is_image'  => $msg->file_path ? ks_is_image($msg->file_path) : false,
+                'time'      => $msg->created_at->format('d/m H:i'),
+                'is_read'   => (bool) $msg->is_read,
+            ]),
+        ]);
+    }
+
+    /**
      * Cliente marca as mensagens do admin como lidas ao abrir a Sala de Transação.
      */
     public function markAsRead($reference_id)

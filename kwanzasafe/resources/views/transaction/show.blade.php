@@ -416,11 +416,88 @@
 <script>
 function chatRoom() {
     return {
+        lastId: {{ $messages->max('id') ?? 0 }},
+        _timer: null,
+
+        init() {
+            this.$nextTick(() => this.scrollToBottom());
+            this._timer = setInterval(() => this.poll(), 5000);
+        },
+
+        destroy() { clearInterval(this._timer); },
+
         scrollToBottom() {
-            this.$nextTick(() => {
-                const body = document.getElementById('chat-body');
-                if (body) body.scrollTop = body.scrollHeight;
+            const b = document.getElementById('chat-body');
+            if (b) b.scrollTop = b.scrollHeight;
+        },
+
+        async poll() {
+            try {
+                const r = await fetch('{{ route('chat.poll', $transaction->reference_id) }}?after=' + this.lastId, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                });
+                if (!r.ok) return;
+                const { messages } = await r.json();
+                if (!messages || !messages.length) return;
+                const hasNewFromOther = messages.some(m => !m.is_mine);
+                this.appendMessages(messages);
+                this.lastId = messages[messages.length - 1].id;
+                this.scrollToBottom();
+                if (hasNewFromOther) this.playSound();
+            } catch (e) {}
+        },
+
+        appendMessages(messages) {
+            const body = document.getElementById('chat-body');
+            const empty = body.querySelector('.tr-chat-empty');
+            if (empty) empty.remove();
+            messages.forEach(msg => {
+                const w = document.createElement('div');
+                w.innerHTML = this.buildMessage(msg).trim();
+                body.appendChild(w.firstElementChild);
             });
+        },
+
+        buildMessage(msg) {
+            if (msg.is_system) {
+                return `<div class="tr-sys-msg"><span class="tr-sys-msg__text">${this.esc(msg.text)}</span></div>`;
+            }
+            const side     = msg.is_mine ? 'mine' : 'admin';
+            const initials = msg.is_mine ? 'EU' : 'KS';
+            let body = '';
+            if (msg.text) body += this.esc(msg.text);
+            if (msg.file_url) {
+                if (msg.is_image) {
+                    body += `<img src="${msg.file_url}" class="tr-msg__image" onclick="window.open(this.src,'_blank')">`;
+                } else {
+                    body += `<a href="${msg.file_url}" target="_blank" class="tr-msg__file">📎 Ver Documento</a>`;
+                }
+            }
+            const tick = msg.is_mine
+                ? `<span style="color:${msg.is_read ? '#10b981' : '#94a3b8'};">${msg.is_read ? '✓✓' : '✓'}</span>`
+                : '';
+            return `<div class="tr-msg ${side}">
+                <div class="tr-msg__avatar">${initials}</div>
+                <div class="tr-msg__content">
+                    <div class="tr-msg__bubble">${body}</div>
+                    <div class="tr-msg__meta"><span>${msg.time}</span>${tick}</div>
+                </div>
+            </div>`;
+        },
+
+        esc(str) {
+            if (!str) return '';
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML.replace(/\n/g, '<br>');
+        },
+
+        playSound() {
+            try {
+                const a = new Audio('{{ asset('assets/sounds/notify.wav') }}');
+                a.volume = 0.5;
+                a.play().catch(() => {});
+            } catch (e) {}
         },
     };
 }
