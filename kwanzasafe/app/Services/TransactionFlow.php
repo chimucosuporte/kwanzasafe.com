@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Services\LedgerService;
 
 /**
  * TransactionFlow — Gere todas as transições de estado de uma transação.
@@ -86,6 +87,11 @@ class TransactionFlow
         Cache::forget('ks.admin.stats.week');
         Cache::forget('ks.admin.stats.all');
         Cache::forget('ks.admin.chart_data');
+
+        // Registar no ledger quando transação é concluída
+        if ($newStatus === 'completed') {
+            LedgerService::recordTransactionCompleted($transaction->fresh(), $actor);
+        }
 
         try {
             $client = $transaction->fresh()->user;

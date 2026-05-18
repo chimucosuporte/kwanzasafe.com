@@ -139,6 +139,9 @@ class KycBot
 
         $user->save();
 
+        // Sincronizar is_fully_verified após qualquer alteração KYC
+        $user->syncFullyVerified();
+
         return $result;
     }
 

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Services\KycBot;
+use App\Services\OtpService;
 
 class VerificationController extends Controller
 {
@@ -45,22 +46,50 @@ class VerificationController extends Controller
     }
 
     /**
-     * Passo 2: Telefone
+     * Passo 2: Telefone — guarda o número e envia OTP por email
      */
     public function updatePhone(Request $request)
     {
         $request->validate([
-            'phone' => 'required|string|max:30',
+            'phone' => 'required|string|min:7|max:30',
         ]);
 
-        $user = Auth::user();
-        $user->phone_number = $request->phone;
-        $user->phone_verified_at = now(); // Em prod, aqui faria SMS / WhatsApp
+        $user   = Auth::user();
+        $otp    = new OtpService();
+        $result = $otp->sendPhoneOtp($user, $request->phone, $request->ip());
+
+        if (!$result['success']) {
+            return back()->withErrors(['phone' => $result['message']]);
+        }
+
+        // Guardar número temporariamente (sem marcar como verificado ainda)
+        $user->phone_number      = $request->phone;
+        $user->phone_verified_at = null;
         $user->save();
+
+        return back()->with('success', $result['message'] . ' Introduz o código para confirmar o número.');
+    }
+
+    /**
+     * Passo 2b: Verificar OTP de telefone
+     */
+    public function verifyPhone(Request $request)
+    {
+        $request->validate([
+            'phone_otp' => 'required|string|size:6',
+        ]);
+
+        $user   = Auth::user();
+        $otp    = new OtpService();
+        $result = $otp->verifyPhoneOtp($user, $request->phone_otp);
+
+        if (!$result['success']) {
+            return back()->withErrors(['phone_otp' => $result['message']]);
+        }
 
         $this->reanalyzeKyc($user);
 
-        return back()->with('success', 'Telefone verificado.');
+        return back()->with('success', 'Número de telefone verificado com sucesso!');
     }
 
     /**

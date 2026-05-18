@@ -63,7 +63,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::post('/verify/data',     [VerificationController::class, 'updatePersonalData'])->name('verify.data');
-    Route::post('/verify/phone',    [VerificationController::class, 'updatePhone'])       ->name('verify.phone');
+    Route::post('/verify/phone',        [VerificationController::class, 'updatePhone'])  ->name('verify.phone');
+    Route::post('/verify/phone/submit', [VerificationController::class, 'verifyPhone'])   ->name('verify.phone.submit');
     Route::post('/verify/document', [VerificationController::class, 'uploadDocument'])    ->name('verify.document');
     Route::post('/verify/photo',    [VerificationController::class, 'uploadPhoto'])       ->name('verify.photo');
 

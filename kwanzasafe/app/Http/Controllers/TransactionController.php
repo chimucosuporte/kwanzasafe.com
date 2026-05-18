@@ -41,7 +41,19 @@ class TransactionController extends Controller
         $taxa         = ExchangeRate::findOrFail($request->moeda);
         $valorEnviar  = $request->valor_enviar;
         $valorReceber = round($valorEnviar * $taxa->rate, 2);
-        $referenceId  = 'KZ' . strtoupper(Str::random(6));
+
+        // Garantir unicidade do reference_id com até 5 tentativas
+        $referenceId = null;
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $candidate = 'KZ' . strtoupper(Str::random(6));
+            if (!Transaction::withTrashed()->where('reference_id', $candidate)->exists()) {
+                $referenceId = $candidate;
+                break;
+            }
+        }
+        if (!$referenceId) {
+            return back()->with('error', 'Erro temporário ao criar transação. Tenta novamente.');
+        }
 
         $transaction = Transaction::create([
             'reference_id'     => $referenceId,

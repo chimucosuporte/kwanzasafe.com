@@ -42,6 +42,7 @@ class KycAdminController extends Controller
         }
 
         $kycUser->update(['identity_verified_at' => now()]);
+        $kycUser->syncFullyVerified();
 
         AuditLogger::kyc('approved',
             "KYC aprovado manualmente para {$kycUser->email} (BI: {$kycUser->bi_number})",
@@ -60,7 +61,9 @@ class KycAdminController extends Controller
         $kycUser->update([
             'identity_document_path' => null,
             'profile_photo_path'     => null,
+            'identity_verified_at'   => null,
         ]);
+        $kycUser->syncFullyVerified();
 
         AuditLogger::kyc('rejected',
             "KYC rejeitado para {$kycUser->email}. Motivo: {$request->reason}",

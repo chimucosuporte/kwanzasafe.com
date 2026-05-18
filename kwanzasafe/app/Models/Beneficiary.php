@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Beneficiary extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * Colunas conforme migration 2026_04_19_055608_create_beneficiaries_table:

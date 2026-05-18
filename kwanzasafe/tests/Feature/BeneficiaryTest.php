@@ -79,7 +79,7 @@ it('client can delete their own beneficiary', function () {
         ->delete(route('beneficiary.destroy', $beneficiary->id))
         ->assertRedirect();
 
-    $this->assertDatabaseMissing('beneficiaries', ['id' => $beneficiary->id]);
+    $this->assertSoftDeleted('beneficiaries', ['id' => $beneficiary->id]);
 });
 
 it('blocks client from deleting another user\'s beneficiary', function () {

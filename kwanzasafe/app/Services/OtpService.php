@@ -187,6 +187,132 @@ class OtpService
     }
 
     // ========================================================================
+    // PHONE OTP (código enviado por email, confirma número de telefone)
+    // ========================================================================
+
+    /**
+     * Gera OTP e envia por email para confirmar um número de telefone.
+     * O utilizador submete o número; o código chega ao email verificado.
+     */
+    public function sendPhoneOtp(User $user, string $phoneNumber, ?string $ip = null): array
+    {
+        if (!$this->canRequestNewCode($user, 'phone')) {
+            return [
+                'success' => false,
+                'message' => 'Demasiados códigos solicitados. Aguarda 1 hora antes de tentar novamente.',
+                'code'    => 'rate_limited',
+            ];
+        }
+
+        $plainCode = $this->generateCode();
+        $this->invalidatePreviousCodes($user, 'phone');
+
+        $otp = OtpCode::create([
+            'user_id'     => $user->id,
+            'type'        => 'phone',
+            'destination' => $phoneNumber,
+            'code_hash'   => Hash::make($plainCode),
+            'attempts'    => 0,
+            'expires_at'  => now()->addMinutes(self::EXPIRY_MINUTES),
+            'ip_address'  => $ip,
+        ]);
+
+        try {
+            Mail::to($user->email)->send(new OtpEmail($user, $plainCode, self::EXPIRY_MINUTES, 'phone', $phoneNumber));
+
+            Log::info('Phone OTP sent via email', [
+                'user_id' => $user->id,
+                'otp_id'  => $otp->id,
+                'phone'   => $phoneNumber,
+            ]);
+
+            return [
+                'success'            => true,
+                'message'            => 'Código enviado para ' . $this->maskEmail($user->email) . ' para confirmar o número ' . $this->maskPhone($phoneNumber),
+                'expires_in_minutes' => self::EXPIRY_MINUTES,
+            ];
+        } catch (\Exception $e) {
+            $otp->delete();
+
+            Log::error('Failed to send phone OTP email', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Erro ao enviar código. Tenta novamente em alguns minutos.',
+                'code'    => 'send_failed',
+            ];
+        }
+    }
+
+    /**
+     * Valida o OTP e marca phone_verified_at no utilizador.
+     */
+    public function verifyPhoneOtp(User $user, string $submittedCode): array
+    {
+        $submittedCode = preg_replace('/[^0-9]/', '', $submittedCode);
+
+        if (strlen($submittedCode) !== self::CODE_LENGTH) {
+            return [
+                'success' => false,
+                'message' => 'Código deve ter 6 dígitos.',
+                'code'    => 'invalid_format',
+            ];
+        }
+
+        $otp = OtpCode::where('user_id', $user->id)
+                      ->where('type', 'phone')
+                      ->whereNull('verified_at')
+                      ->where('expires_at', '>', now())
+                      ->orderBy('created_at', 'desc')
+                      ->first();
+
+        if (!$otp) {
+            return [
+                'success' => false,
+                'message' => 'Nenhum código válido encontrado. Solicita um novo código.',
+                'code'    => 'no_active_code',
+            ];
+        }
+
+        if ($otp->attempts >= self::MAX_ATTEMPTS) {
+            return [
+                'success' => false,
+                'message' => 'Demasiadas tentativas. Solicita um novo código.',
+                'code'    => 'max_attempts',
+            ];
+        }
+
+        $otp->increment('attempts');
+
+        if (!Hash::check($submittedCode, $otp->code_hash)) {
+            $remaining = self::MAX_ATTEMPTS - $otp->attempts;
+            return [
+                'success'            => false,
+                'message'            => "Código incorreto. Restam {$remaining} tentativa(s).",
+                'code'               => 'invalid_code',
+                'attempts_remaining' => $remaining,
+            ];
+        }
+
+        $otp->markAsVerified();
+
+        // Confirmar o número de telefone guardado no OTP
+        $user->phone_number     = $otp->destination;
+        $user->phone_verified_at = now();
+        $user->save();
+
+        Log::info('Phone OTP verified', ['user_id' => $user->id, 'phone' => $otp->destination]);
+
+        return [
+            'success' => true,
+            'message' => 'Número de telefone verificado com sucesso!',
+        ];
+    }
+
+    // ========================================================================
     // HELPERS
     // ========================================================================
 
@@ -239,6 +365,18 @@ class OtpService
             return $local[0] . '***@' . $domain;
         }
         return substr($local, 0, 2) . str_repeat('*', max(strlen($local) - 2, 3)) . '@' . $domain;
+    }
+
+    /**
+     * Mascara número de telefone para feedback ao utilizador
+     */
+    private function maskPhone(string $phone): string
+    {
+        $clean = preg_replace('/[^0-9+]/', '', $phone);
+        if (strlen($clean) <= 4) {
+            return '****';
+        }
+        return substr($clean, 0, 3) . str_repeat('*', strlen($clean) - 5) . substr($clean, -2);
     }
 
     /**

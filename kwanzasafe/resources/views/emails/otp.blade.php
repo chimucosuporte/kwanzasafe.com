@@ -52,7 +52,11 @@
                         </h1>
 
                         <p style="margin:0 0 24px 0;font-family:Arial,sans-serif;font-size:15px;color:#404040;line-height:1.6;">
-                            Recebemos um pedido para verificar o teu endereço de email na <strong>KwanzaSafe</strong>. Usa o código abaixo para concluir a verificação:
+                            @if(isset($context) && $context === 'phone')
+                                Recebemos um pedido para confirmar o número de telefone <strong>{{ $contextData ?? '' }}</strong> na <strong>KwanzaSafe</strong>. Usa o código abaixo para concluir a confirmação:
+                            @else
+                                Recebemos um pedido para verificar o teu endereço de email na <strong>KwanzaSafe</strong>. Usa o código abaixo para concluir a verificação:
+                            @endif
                         </p>
 
                         {{-- ============ CÓDIGO OTP (DESTAQUE) ============ --}}

@@ -16,18 +16,26 @@ class OtpEmail extends Mailable
     public User $user;
     public string $code;
     public int $expiryMinutes;
+    public string $context;
+    public ?string $contextData;
 
-    public function __construct(User $user, string $code, int $expiryMinutes = 15)
+    public function __construct(User $user, string $code, int $expiryMinutes = 15, string $context = 'email', ?string $contextData = null)
     {
-        $this->user = $user;
-        $this->code = $code;
+        $this->user        = $user;
+        $this->code        = $code;
         $this->expiryMinutes = $expiryMinutes;
+        $this->context     = $context;      // 'email' | 'phone'
+        $this->contextData = $contextData;  // número de telefone quando context='phone'
     }
 
     public function envelope(): Envelope
     {
+        $subject = $this->context === 'phone'
+            ? 'Confirmação de Telefone KwanzaSafe — ' . $this->code
+            : 'Código de Verificação KwanzaSafe — ' . $this->code;
+
         return new Envelope(
-            subject: 'Código de Verificação KwanzaSafe — ' . $this->code,
+            subject: $subject,
             from: new \Illuminate\Mail\Mailables\Address(
                 config('mail.from.address', 'geral@kwanzasafe.com'),
                 'KwanzaSafe'
@@ -43,6 +51,8 @@ class OtpEmail extends Mailable
                 'user'          => $this->user,
                 'code'          => $this->code,
                 'expiryMinutes' => $this->expiryMinutes,
+                'context'       => $this->context,
+                'contextData'   => $this->contextData,
             ],
         );
     }

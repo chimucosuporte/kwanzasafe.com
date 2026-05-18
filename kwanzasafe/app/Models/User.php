@@ -19,8 +19,7 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'province', 'municipality', 'address',
         'identity_document_path', 'identity_verified_at',
         'profile_photo_path', 'data_verified',
-        'is_admin',
-        //campos novos 
+        'is_admin', 'is_fully_verified',
         'kyc_score',
         'kyc_bot_status',
         'kyc_bot_analyzed_at',
@@ -44,13 +43,33 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'bi_expiry'           => 'date',
         'data_verified'       => 'boolean',
         'is_admin'            => 'boolean',
+        'is_fully_verified'   => 'boolean',
         'balance'             => 'decimal:2',
-        //campos novos
         'kyc_bot_analyzed_at' => 'datetime',
         'kyc_bot_notes'       => 'array',
-        'birth_date'          => 'date',
-        'bi_expiry'           => 'date',
     ];
+
+    // ============================================================
+    // KYC helpers
+    // ============================================================
+
+    /**
+     * Recalcula e persiste is_fully_verified com base nos campos KYC reais.
+     * Chamar após qualquer alteração de estado KYC.
+     */
+    public function syncFullyVerified(): void
+    {
+        $verified = $this->email_verified_at
+            && $this->phone_verified_at
+            && $this->identity_verified_at
+            && $this->data_verified
+            && $this->kyc_bot_status === 'auto_approved';
+
+        if ((bool) $this->is_fully_verified !== (bool) $verified) {
+            $this->is_fully_verified = $verified;
+            $this->saveQuietly();
+        }
+    }
 
     // ============================================================
     // Accessors / Mutators
