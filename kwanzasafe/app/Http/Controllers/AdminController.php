@@ -112,6 +112,7 @@ class AdminController extends Controller
                 ->toArray();
 
             $totalReceivedAOA = (float) (clone $volumeQuery)->sum('amount_received');
+            $totalFees        = (float) (clone $volumeQuery)->sum('fee_amount');
 
             $unreadChats = ChatMessage::whereHas('sender', fn($q) => $q->where('is_admin', false))
                 ->where('is_read', false)
@@ -126,6 +127,7 @@ class AdminController extends Controller
                 'tx_completed'       => $txCompleted,
                 'tx_cancelled'       => $txCancelled,
                 'volume_aoa'         => $totalReceivedAOA,
+                'total_fees'         => $totalFees,
                 'volume_by_currency' => $volumeByCurrency,
                 'unread_chats'       => $unreadChats,
                 'period'             => $period,

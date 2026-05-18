@@ -30,6 +30,7 @@
     $hasAnyTransaction = $transactions->count() > 0;
     $pendingCount = $transactions->whereNotIn('status', ['completed','cancelled','expired'])->count();
     $completedCount = $transactions->where('status', 'completed')->count();
+    $totalKzReceived = $transactions->where('status', 'completed')->sum('amount_received');
 
     // Taxas reais para a calculadora
     $currencyMeta = [
@@ -53,7 +54,10 @@
         'created_at'      => $tx->created_at->toDateTimeString(),
         'created_diff'    => $tx->created_at->diffForHumans(),
         'expires_at'      => $tx->expires_at?->toDateTimeString(),
-        'url'             => route('transaction.show', $tx->reference_id),
+        'url'         => route('transaction.show', $tx->reference_id),
+        'receipt_url' => $tx->status === 'completed'
+                         ? route('transaction.receipt', $tx->reference_id)
+                         : null,
     ])->values();
 @endphp
 
@@ -1009,7 +1013,23 @@
 
         {{-- ============ HISTÓRICO ============ --}}
         <div x-show="activeTab === 'history'" x-transition.opacity x-cloak>
-            <h2 class="dc-section__title" style="margin-bottom:1rem;">Histórico de Transações</h2>
+            <h2 class="dc-section__title" style="margin-bottom:0.875rem;">Histórico de Transações</h2>
+
+            {{-- Stats strip --}}
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:1rem;">
+                <div style="background:white;border:1px solid #e5e5e5;border-radius:12px;padding:0.875rem;text-align:center;">
+                    <div style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:#0f172a;">{{ $transactions->count() }}</div>
+                    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-top:2px;">Total</div>
+                </div>
+                <div style="background:white;border:1px solid #e5e5e5;border-radius:12px;padding:0.875rem;text-align:center;">
+                    <div style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:#064e3b;">{{ $completedCount }}</div>
+                    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-top:2px;">Concluídas</div>
+                </div>
+                <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #a7f3d0;border-radius:12px;padding:0.875rem;text-align:center;">
+                    <div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;color:#064e3b;line-height:1.1;">{{ number_format($totalKzReceived, 0, ',', '.') }}</div>
+                    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#059669;margin-top:2px;">Kz Recebidos</div>
+                </div>
+            </div>
 
             <div class="dc-filter-pills">
                 <template x-for="f in filters" :key="f.key">
@@ -1026,17 +1046,26 @@
             </template>
 
             <template x-for="tx in filteredTransactions" :key="tx.reference_id">
-                <a :href="tx.url" class="dc-tx-card">
-                    <div class="dc-tx-card__icon" :class="tx.status">
-                        <span x-text="tx.status === 'completed' ? '✓' : (['cancelled','expired'].includes(tx.status) ? '✕' : '⏳')"></span>
-                    </div>
-                    <div class="dc-tx-card__info">
-                        <div class="dc-tx-card__ref" x-text="'#' + tx.reference_id"></div>
-                        <div class="dc-tx-card__amount" x-text="formatCurrency(tx.amount_sent) + ' ' + tx.currency_from"></div>
-                        <div class="dc-tx-card__when" x-text="tx.created_diff"></div>
-                    </div>
-                    <div class="dc-tx-card__status" :class="tx.status" x-text="tx.status.replace(/_/g, ' ')"></div>
-                </a>
+                <div style="position:relative;">
+                    <a :href="tx.url" class="dc-tx-card">
+                        <div class="dc-tx-card__icon" :class="tx.status">
+                            <span x-text="tx.status === 'completed' ? '✓' : (['cancelled','expired'].includes(tx.status) ? '✕' : '⏳')"></span>
+                        </div>
+                        <div class="dc-tx-card__info">
+                            <div class="dc-tx-card__ref" x-text="'#' + tx.reference_id"></div>
+                            <div class="dc-tx-card__amount" x-text="formatCurrency(tx.amount_sent) + ' ' + tx.currency_from"></div>
+                            <div class="dc-tx-card__when" x-text="tx.created_diff"></div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+                            <div class="dc-tx-card__status" :class="tx.status" x-text="statusLabel(tx.status)"></div>
+                            <button x-show="tx.receipt_url"
+                                    @click.stop.prevent="window.open(tx.receipt_url, '_blank')"
+                                    style="font-size:0.6rem;font-weight:800;font-family:'Syne',sans-serif;background:#064e3b;color:white;border:none;padding:3px 8px;border-radius:20px;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">
+                                📄 Comp.
+                            </button>
+                        </div>
+                    </a>
+                </div>
             </template>
         </div>
 
@@ -1354,6 +1383,16 @@ function clientDashboard() {
 
         formatCurrency(val) {
             return parseFloat(val).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        statusLabel(status) {
+            const labels = {
+                pending: 'Pendente', negotiating: 'Negociação',
+                awaiting_payment: 'Aguarda Pag.', payment_received: 'Pag. Recebido',
+                aoa_sent: 'AOA Enviados', completed: 'Concluída',
+                cancelled: 'Cancelada', expired: 'Expirada',
+            };
+            return labels[status] || status.replace(/_/g, ' ');
         },
     };
 }

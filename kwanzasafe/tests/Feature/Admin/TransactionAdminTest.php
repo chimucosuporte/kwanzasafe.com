@@ -177,3 +177,63 @@ it('completes the full transaction flow', function () {
     $this->actingAs($client)->post(route('transaction.confirm', $transaction->reference_id));
     expect($transaction->fresh()->status)->toBe('completed');
 });
+
+// ---------------------------------------------------------------------------
+// receipt — comprovativo
+// ---------------------------------------------------------------------------
+
+it('admin can view receipt for completed transaction', function () {
+    $admin       = adminUser();
+    $transaction = Transaction::factory()->completed()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.transaction.receipt', $transaction->id))
+        ->assertOk()
+        ->assertSee($transaction->reference_id);
+});
+
+it('admin cannot view receipt for non-completed transaction', function () {
+    $admin       = adminUser();
+    $transaction = Transaction::factory()->pending()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.transaction.receipt', $transaction->id))
+        ->assertRedirect();
+});
+
+// ---------------------------------------------------------------------------
+// assign — assumir transação
+// ---------------------------------------------------------------------------
+
+it('admin can assign themselves to an active transaction', function () {
+    $admin       = adminUser();
+    $transaction = Transaction::factory()->pending()->create();
+
+    $this->actingAs($admin)
+        ->post(route('admin.transaction.assign', $transaction->id))
+        ->assertRedirect();
+
+    expect($transaction->fresh()->assigned_admin)->toBe($admin->id);
+});
+
+it('admin cannot assign a completed transaction', function () {
+    $admin       = adminUser();
+    $transaction = Transaction::factory()->completed()->create();
+
+    $this->actingAs($admin)
+        ->post(route('admin.transaction.assign', $transaction->id))
+        ->assertRedirect();
+
+    expect($transaction->fresh()->assigned_admin)->toBeNull();
+});
+
+it('admin cannot assign a cancelled transaction', function () {
+    $admin       = adminUser();
+    $transaction = Transaction::factory()->cancelled()->create();
+
+    $this->actingAs($admin)
+        ->post(route('admin.transaction.assign', $transaction->id))
+        ->assertRedirect();
+
+    expect($transaction->fresh()->assigned_admin)->toBeNull();
+});

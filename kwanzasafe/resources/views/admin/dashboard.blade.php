@@ -909,6 +909,36 @@
             </div>
         </div>
 
+        {{-- ============ PAINEL FINANCEIRO ============ --}}
+        <div style="margin-bottom:1rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.625rem;padding:0 0.125rem;">
+                <div>
+                    <div style="font-family:'Syne',sans-serif;font-size:0.875rem;font-weight:800;">Resumo Financeiro</div>
+                    <div style="font-size:0.65rem;color:#737373;margin-top:1px;">{{ $stats['period_label'] }} · Transações concluídas</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.625rem;">
+                @php
+                    $finItems = [
+                        ['flag'=>'🇪🇺','code'=>'EUR','label'=>'Euros','val'=> number_format($stats['volume_by_currency']['EUR'] ?? 0, 0, ',', '.'),'color'=>'#003399','bg'=>'#eff6ff'],
+                        ['flag'=>'🇧🇷','code'=>'BRL','label'=>'Reais','val'=> number_format($stats['volume_by_currency']['BRL'] ?? 0, 0, ',', '.'),'color'=>'#009c3b','bg'=>'#f0fdf4'],
+                        ['flag'=>'₮','code'=>'USDT','label'=>'Stablecoins','val'=> number_format(($stats['volume_by_currency']['USDT'] ?? 0)+($stats['volume_by_currency']['USDC'] ?? 0), 0, ',', '.'),'color'=>'#26a17b','bg'=>'#f0fdfa'],
+                        ['flag'=>'💰','code'=>'Taxas','label'=>'Receita em taxas','val'=> number_format($stats['total_fees'] ?? 0, 2, ',', '.'),'color'=>'#7c3aed','bg'=>'#f5f3ff'],
+                    ];
+                @endphp
+                @foreach($finItems as $fi)
+                <div style="background:{{ $fi['bg'] }};border:1px solid {{ $fi['color'] }}22;border-radius:12px;padding:0.875rem 1rem;">
+                    <div style="display:flex;align-items:center;gap:0.375rem;margin-bottom:0.375rem;">
+                        <span style="font-size:1rem;line-height:1;">{{ $fi['flag'] }}</span>
+                        <span style="font-size:0.6rem;font-weight:800;color:{{ $fi['color'] }};text-transform:uppercase;letter-spacing:0.08em;">{{ $fi['code'] }}</span>
+                    </div>
+                    <div style="font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;color:#0f172a;line-height:1.1;">{{ $fi['val'] }}</div>
+                    <div style="font-size:0.6rem;color:#737373;font-weight:600;margin-top:2px;">{{ $fi['label'] }}</div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+
         {{-- ============ PAINÉIS ============ --}}
         <div class="ad-panels">
 
