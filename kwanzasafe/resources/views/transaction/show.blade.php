@@ -309,6 +309,17 @@
         </div>
         @endif
 
+        {{-- Comprovativo (apenas concluídas) --}}
+        @if($transaction->status === 'completed')
+        <div style="text-align:center;padding:0.5rem 0 0.75rem;">
+            <a href="{{ route('transaction.receipt', $transaction->reference_id) }}" target="_blank"
+               style="display:inline-flex;align-items:center;gap:0.5rem;background:#064e3b;color:white;text-decoration:none;padding:0.75rem 1.5rem;border-radius:12px;font-family:'Syne',sans-serif;font-weight:800;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Descarregar Comprovativo
+            </a>
+        </div>
+        @endif
+
         {{-- Cancelar Transação (apenas pending / negotiating) --}}
         @if(in_array($transaction->status, ['pending', 'negotiating']))
         <div style="text-align:center;padding:0.25rem 0 0.75rem;">

@@ -186,6 +186,37 @@ body { background:#f8fafc; }
         <div class="atx-flash error">⚠ {{ $errors->first() }}</div>
     @endif
 
+    {{-- AGENTE + COMPROVATIVO --}}
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.875rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+            @if($transaction->assigned_admin)
+                @php $agent = \App\Models\User::find($transaction->assigned_admin); @endphp
+                <span style="background:#d1fae5;color:#065f46;font-weight:700;padding:4px 10px;border-radius:20px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;">
+                    🧑‍💼 Agente: {{ $agent?->full_name ?? 'Admin #'.$transaction->assigned_admin }}
+                </span>
+                @if($transaction->assigned_admin !== auth()->id() && !in_array($transaction->status, ['completed','cancelled','expired']))
+                    <form method="POST" action="{{ route('admin.transaction.assign', $transaction->id) }}" style="display:inline;">
+                        @csrf
+                        <button type="submit" style="background:none;border:1px solid #e2e8f0;color:#64748b;padding:3px 10px;border-radius:20px;font-size:0.65rem;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Assumir</button>
+                    </form>
+                @endif
+            @elseif(!in_array($transaction->status, ['completed','cancelled','expired']))
+                <form method="POST" action="{{ route('admin.transaction.assign', $transaction->id) }}" style="display:inline;">
+                    @csrf
+                    <button type="submit" style="background:#0f172a;color:white;border:none;padding:5px 14px;border-radius:20px;font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em;">
+                        🧑‍💼 Assumir Esta Transação
+                    </button>
+                </form>
+            @endif
+        </div>
+        @if($transaction->status === 'completed')
+            <a href="{{ route('admin.transaction.receipt', $transaction->id) }}" target="_blank"
+               style="background:#064e3b;color:white;text-decoration:none;padding:5px 14px;border-radius:20px;font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">
+                📄 Comprovativo
+            </a>
+        @endif
+    </div>
+
     {{-- STATUS --}}
     <div class="atx-status-banner">
         <div class="atx-status-icon {{ $transaction->status }}">

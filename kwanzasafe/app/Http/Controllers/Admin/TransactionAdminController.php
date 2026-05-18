@@ -149,6 +149,36 @@ class TransactionAdminController extends Controller
             ->with('success', 'Transação #' . $result['ref'] . ' concluída com sucesso.');
     }
 
+    public function receipt($id)
+    {
+        $transaction = Transaction::with('user')->findOrFail($id);
+
+        if ($transaction->status !== 'completed') {
+            return back()->with('error', 'O comprovativo só está disponível para transações concluídas.');
+        }
+
+        return view('transaction.receipt', compact('transaction'));
+    }
+
+    public function assign($id)
+    {
+        $transaction = Transaction::findOrFail($id);
+
+        if (in_array($transaction->status, ['completed', 'cancelled', 'expired'])) {
+            return back()->with('error', 'Não é possível assumir uma transação neste estado.');
+        }
+
+        $transaction->update(['assigned_admin' => Auth::id()]);
+
+        AuditLogger::transaction('agent_assigned',
+            "Agente assumiu a transação #{$transaction->reference_id}",
+            $transaction,
+            ['admin_id' => Auth::id()]
+        );
+
+        return back()->with('success', 'Transação assumida por ti.');
+    }
+
     public function cancel($id)
     {
         $transaction = Transaction::findOrFail($id);

@@ -30,7 +30,7 @@ body { background:#f5f5f5; }
 .usr-table { width:100%; font-size:0.875rem; border-collapse:collapse; }
 .usr-table thead { background:#fafafa; }
 .usr-table th { text-align:left; padding:0.75rem 1rem; font-size:0.6rem; font-weight:800; color:#737373; text-transform:uppercase; letter-spacing:0.1em; border-bottom:1px solid #e5e5e5; }
-.usr-table tbody tr { border-bottom:1px solid #f5f5f5; }
+.usr-table tbody tr { border-bottom:1px solid #f5f5f5; cursor:pointer; }
 .usr-table tbody tr:last-child { border-bottom:none; }
 .usr-table tbody tr:hover { background:#fafafa; }
 .usr-table td { padding:0.75rem 1rem; vertical-align:middle; }
@@ -120,7 +120,7 @@ body { background:#f5f5f5; }
                 </thead>
                 <tbody>
                     @foreach($users as $u)
-                        <tr>
+                        <tr onclick="window.location='{{ route('admin.users.show', $u->id) }}'">
                             <td>
                                 <div class="usr-cell">
                                     <div class="usr-avatar">

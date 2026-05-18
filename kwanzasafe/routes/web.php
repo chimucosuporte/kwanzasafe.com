@@ -74,6 +74,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/transaction/{reference_id}/upload',  [TransactionController::class, 'uploadReceipt']) ->name('transaction.upload');
     Route::post('/transaction/{reference_id}/confirm', [TransactionController::class, 'confirmReceipt'])->name('transaction.confirm');
     Route::post('/transaction/{reference_id}/cancel',  [TransactionController::class, 'cancel'])        ->name('transaction.cancel');
+    Route::get('/transaction/{reference_id}/receipt', [TransactionController::class, 'receipt'])       ->name('transaction.receipt');
 
     Route::post('/transaction/{reference_id}/chat', [ChatController::class, 'sendMessage'])->name('chat.send');
     Route::post('/transaction/{reference_id}/read', [ChatController::class, 'markAsRead']) ->name('chat.read');
@@ -102,11 +103,15 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
     Route::post('/transaction/{id}/aoa-sent',         [TransactionAdminController::class, 'markAoaSent'])      ->name('transaction.aoa_sent');
     Route::post('/transaction/{id}/approve',          [TransactionAdminController::class, 'approve'])          ->name('transaction.approve');
     Route::post('/transaction/{id}/cancel',           [TransactionAdminController::class, 'cancel'])           ->name('transaction.cancel');
+    Route::get('/transaction/{id}/receipt',           [TransactionAdminController::class, 'receipt'])          ->name('transaction.receipt');
+    Route::post('/transaction/{id}/assign',           [TransactionAdminController::class, 'assign'])           ->name('transaction.assign');
     Route::post('/transaction/{id}/chat',             [TransactionAdminController::class, 'sendChatMessage'])  ->name('chat.send');
     Route::get('/transaction/{id}/poll',              [TransactionAdminController::class, 'poll'])              ->name('transaction.poll');
 
     // Utilizadores
-    Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
+    Route::get('/users',               [UserAdminController::class, 'index'])      ->name('users.index');
+    Route::get('/users/{id}',          [UserAdminController::class, 'show'])       ->name('users.show');
+    Route::post('/users/{id}/toggle-admin', [UserAdminController::class, 'toggleAdmin'])->name('users.toggle_admin');
 
     // Mensagens
     Route::get('/messages/unread', [MessageAdminController::class, 'unread'])->name('messages.unread');

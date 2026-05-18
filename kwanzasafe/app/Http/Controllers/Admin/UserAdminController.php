@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Transaction;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UserAdminController extends Controller
 {
@@ -34,5 +37,41 @@ class UserAdminController extends Controller
         $users = $query->paginate(20)->withQueryString();
 
         return view('admin.users.index', compact('users', 'kycFilter', 'search'));
+    }
+
+    public function show($id)
+    {
+        $user = User::findOrFail($id);
+
+        $transactions = Transaction::where('user_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->limit(15)
+            ->get();
+
+        $txStats = [
+            'total'     => Transaction::where('user_id', $id)->count(),
+            'completed' => Transaction::where('user_id', $id)->where('status', 'completed')->count(),
+            'active'    => Transaction::where('user_id', $id)->whereIn('status', ['pending','negotiating','awaiting_payment','payment_received','aoa_sent'])->count(),
+            'cancelled' => Transaction::where('user_id', $id)->whereIn('status', ['cancelled','expired'])->count(),
+        ];
+
+        return view('admin.users.show', compact('user', 'transactions', 'txStats'));
+    }
+
+    public function toggleAdmin($id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->id === Auth::id()) {
+            return back()->with('error', 'Não podes alterar o teu próprio papel.');
+        }
+
+        $user->update(['is_admin' => !$user->is_admin]);
+
+        $action = $user->is_admin ? 'promovido a admin' : 'removido de admin';
+
+        AuditLogger::admin("user_{$action}", "Utilizador {$user->email} foi {$action}", $user);
+
+        return back()->with('success', "Utilizador {$action} com sucesso.");
     }
 }

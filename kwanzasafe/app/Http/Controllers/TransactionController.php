@@ -109,6 +109,19 @@ class TransactionController extends Controller
         return back()->with('success', 'Obrigado! A tua transação foi marcada como concluída.');
     }
 
+    public function receipt($reference_id)
+    {
+        $transaction = Transaction::where('reference_id', $reference_id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if ($transaction->status !== 'completed') {
+            return back()->with('error', 'O comprovativo só está disponível para transações concluídas.');
+        }
+
+        return view('transaction.receipt', compact('transaction'));
+    }
+
     public function cancel($reference_id)
     {
         $transaction = Transaction::where('reference_id', $reference_id)
