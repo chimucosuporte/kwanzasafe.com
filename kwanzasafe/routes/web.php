@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\RateAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Admin\StaffAdminController;
 use App\Http\Controllers\Admin\StaffChatController;
+use App\Http\Controllers\Admin\PaymentAccountAdminController;
 use App\Http\Controllers\Admin\MessageAdminController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\BeneficiaryController;
@@ -124,6 +125,12 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
         Route::delete('/staff/{id}',            [StaffAdminController::class, 'destroy'])     ->name('staff.destroy');
 
         Route::post('/transaction/{id}/reassign', [TransactionAdminController::class, 'reassign'])->name('transaction.reassign');
+
+        // Contas de recepção (dados de pagamento por moeda)
+        Route::get('/payment-accounts',         [PaymentAccountAdminController::class, 'index'])  ->name('payment_accounts.index');
+        Route::post('/payment-accounts',        [PaymentAccountAdminController::class, 'store'])  ->name('payment_accounts.store');
+        Route::put('/payment-accounts/{id}',    [PaymentAccountAdminController::class, 'update']) ->name('payment_accounts.update');
+        Route::delete('/payment-accounts/{id}', [PaymentAccountAdminController::class, 'destroy'])->name('payment_accounts.destroy');
 
         // Arbitragem de recursos
         Route::get('/recourses',              [RecourseAdminController::class, 'index'])  ->name('recourses.index');

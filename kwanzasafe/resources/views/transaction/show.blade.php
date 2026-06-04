@@ -34,6 +34,9 @@
     $lastRecourse = $activeRecourse ?? \App\Models\Recourse::where('transaction_id', $transaction->id)
         ->latest()
         ->first();
+
+    // Conta de recepção activa para a moeda desta transação (gerida pelo admin)
+    $paymentAccount = \App\Models\PaymentAccount::activeFor($transaction->currency_from);
 @endphp
 
 <style>
@@ -236,7 +239,7 @@
             </div>
         </div>
 
-        {{-- Dados Bancários para Pagamento --}}
+        {{-- Dados para Pagamento (configurados pelo admin por moeda) --}}
         @if(in_array($transaction->status, ['pending', 'negotiating', 'awaiting_payment']))
         <div class="tr-card">
             <div class="tr-card__title">
@@ -244,37 +247,54 @@
                 Dados para Pagamento (KwanzaSafe)
             </div>
 
-            <div class="tr-alert warn" style="margin-bottom:1rem;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01"/></svg>
-                <span>Paga em <strong>{{ $transaction->currency_from }}</strong> o valor exato de <strong>{{ number_format($transaction->amount_sent, 2, ',', '.') }}</strong>. Coloca <strong>#{{ $transaction->reference_id }}</strong> na referência.</span>
-            </div>
+            @if($paymentAccount)
+                <div class="tr-alert warn" style="margin-bottom:1rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01"/></svg>
+                    <span>Paga em <strong>{{ $transaction->currency_from }}</strong> o valor exato de <strong>{{ number_format($transaction->amount_sent, 2, ',', '.') }}</strong>. Coloca <strong>#{{ $transaction->reference_id }}</strong> na referência.</span>
+                </div>
 
-            <div class="tr-bank-info">
-                <div>
-                    <div class="tr-bank-info__label">Titular</div>
-                    <div class="tr-bank-info__value">KwanzaSafe Lda</div>
-                </div>
-                <div>
-                    <div class="tr-bank-info__label">IBAN / Conta</div>
-                    <div class="tr-bank-info__value" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-                        <span id="ks-iban">PT50 0000 0000 0000 0000 000</span>
-                        <button class="tr-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('ks-iban').textContent);this.textContent='✓ Copiado'">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                            Copiar
-                        </button>
+                <div class="tr-bank-info">
+                    <div>
+                        <div class="tr-bank-info__label">Titular</div>
+                        <div class="tr-bank-info__value">{{ $paymentAccount->holder }}</div>
+                    </div>
+                    <div>
+                        <div class="tr-bank-info__label">IBAN / Conta / Carteira ({{ $transaction->currency_from }})</div>
+                        <div class="tr-bank-info__value" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;word-break:break-all;">
+                            <span id="ks-pay-id">{{ $paymentAccount->identifier }}</span>
+                            <button class="tr-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('ks-pay-id').textContent.trim());this.textContent='✓ Copiado'">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                                Copiar
+                            </button>
+                        </div>
+                    </div>
+                    @if($paymentAccount->network)
+                    <div>
+                        <div class="tr-bank-info__label">Rede / BIC</div>
+                        <div class="tr-bank-info__value">{{ $paymentAccount->network }}</div>
+                    </div>
+                    @endif
+                    <div>
+                        <div class="tr-bank-info__label">Referência Obrigatória</div>
+                        <div class="tr-bank-info__value" style="display:flex;align-items:center;gap:0.75rem;">
+                            <span>#{{ $transaction->reference_id }}</span>
+                            <button class="tr-copy-btn" onclick="navigator.clipboard.writeText('#{{ $transaction->reference_id }}');this.textContent='✓ Copiado'">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                                Copiar
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div>
-                    <div class="tr-bank-info__label">Referência Obrigatória</div>
-                    <div class="tr-bank-info__value" style="display:flex;align-items:center;gap:0.75rem;">
-                        <span>#{{ $transaction->reference_id }}</span>
-                        <button class="tr-copy-btn" onclick="navigator.clipboard.writeText('#{{ $transaction->reference_id }}');this.textContent='✓ Copiado'">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                            Copiar
-                        </button>
-                    </div>
+
+                @if($paymentAccount->instructions)
+                    <div style="margin-top:0.875rem;font-size:0.78rem;color:#64748b;line-height:1.5;">{{ $paymentAccount->instructions }}</div>
+                @endif
+            @else
+                <div class="tr-alert info">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/></svg>
+                    <span>O nosso agente vai indicar-te os dados de pagamento em <strong>{{ $transaction->currency_from }}</strong> aqui no chat. Mantém a referência <strong>#{{ $transaction->reference_id }}</strong>.</span>
                 </div>
-            </div>
+            @endif
         </div>
         @endif
 

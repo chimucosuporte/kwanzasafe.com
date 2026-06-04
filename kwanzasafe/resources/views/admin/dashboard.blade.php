@@ -795,6 +795,10 @@
                 Recursos
                 @if($navRecoursesPending > 0)<span class="ad-nav__badge warn">{{ $navRecoursesPending }}</span>@endif
             </a>
+            <a href="{{ route('admin.payment_accounts.index') }}" class="ad-nav" @click="sidebarOpen = false">
+                <svg class="ad-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Contas de Recepção
+            </a>
             @endif
 
             <div class="ad-sidebar__label">Conta</div>
