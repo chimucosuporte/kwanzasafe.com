@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\KycAdminController;
 use App\Http\Controllers\Admin\RateAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Admin\StaffAdminController;
+use App\Http\Controllers\Admin\StaffChatController;
 use App\Http\Controllers\Admin\MessageAdminController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\BeneficiaryController;
@@ -138,6 +139,11 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
 
     // Mensagens
     Route::get('/messages/unread', [MessageAdminController::class, 'unread'])->name('messages.unread');
+
+    // Canal de staff geral (suporte ↔ super-admin)
+    Route::get('/staff-chat',                 [StaffChatController::class, 'index'])->name('staff_chat.index');
+    Route::post('/staff-chat/{userId}',       [StaffChatController::class, 'send']) ->name('staff_chat.send');
+    Route::get('/staff-chat/{userId}/poll',   [StaffChatController::class, 'poll']) ->name('staff_chat.poll');
 
     // Taxas
     Route::get('/rates',           [RateAdminController::class, 'index']) ->name('rates.index');
