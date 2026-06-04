@@ -116,6 +116,8 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
         Route::post('/staff',                   [StaffAdminController::class, 'store'])       ->name('staff.store');
         Route::post('/staff/{id}/toggle-active', [StaffAdminController::class, 'toggleActive'])->name('staff.toggle_active');
         Route::delete('/staff/{id}',            [StaffAdminController::class, 'destroy'])     ->name('staff.destroy');
+
+        Route::post('/transaction/{id}/reassign', [TransactionAdminController::class, 'reassign'])->name('transaction.reassign');
     });
 
     // Utilizadores

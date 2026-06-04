@@ -208,6 +208,20 @@ body { background:#f8fafc; }
                     </button>
                 </form>
             @endif
+
+            {{-- Reatribuição (super-admin) --}}
+            @if(auth()->user()->isSuperAdmin() && $agents->count() && !in_array($transaction->status, ['completed','cancelled','expired']))
+                <form method="POST" action="{{ route('admin.transaction.reassign', $transaction->id) }}" style="display:inline-flex;align-items:center;gap:0.375rem;">
+                    @csrf
+                    <select name="agent_id" required style="border:1px solid #e2e8f0;border-radius:20px;padding:3px 10px;font-size:0.65rem;font-weight:700;color:#475569;background:white;cursor:pointer;">
+                        <option value="">Reatribuir a…</option>
+                        @foreach($agents as $ag)
+                            <option value="{{ $ag->id }}" {{ $transaction->assigned_admin == $ag->id ? 'selected' : '' }}>{{ $ag->full_name }}</option>
+                        @endforeach
+                    </select>
+                    <button type="submit" style="background:#009d44;color:white;border:none;padding:3px 10px;border-radius:20px;font-size:0.65rem;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">OK</button>
+                </form>
+            @endif
         </div>
         @if($transaction->status === 'completed')
             <a href="{{ route('admin.transaction.receipt', $transaction->id) }}" target="_blank"

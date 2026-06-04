@@ -68,7 +68,7 @@ body { background:#f5f5f5; }
 
 @media(max-width:768px) {
     .tx-table th:nth-child(3), .tx-table td:nth-child(3),
-    .tx-table th:nth-child(5), .tx-table td:nth-child(5) { display:none; }
+    .tx-table th:nth-child(4), .tx-table td:nth-child(4) { display:none; }
     .tx-filters { flex-direction:column; align-items:stretch; }
     .tx-search { max-width:100%; }
 }
@@ -106,15 +106,25 @@ body { background:#f5f5f5; }
         <div class="tx-filter-group">
             <span class="tx-filter-label">Período</span>
             <div class="tx-filter-pills">
-                <a href="?{{ http_build_query(['period' => 'today', 'status' => $status, 'q' => $search]) }}" class="tx-pill {{ $period === 'today' ? 'active' : '' }}">Hoje</a>
-                <a href="?{{ http_build_query(['period' => 'week', 'status' => $status, 'q' => $search]) }}" class="tx-pill {{ $period === 'week' ? 'active' : '' }}">7 dias</a>
-                <a href="?{{ http_build_query(['period' => 'all', 'status' => $status, 'q' => $search]) }}" class="tx-pill {{ $period === 'all' ? 'active' : '' }}">Tudo</a>
+                <a href="?{{ http_build_query(['period' => 'today', 'status' => $status, 'q' => $search, 'assigned' => $assigned]) }}" class="tx-pill {{ $period === 'today' ? 'active' : '' }}">Hoje</a>
+                <a href="?{{ http_build_query(['period' => 'week', 'status' => $status, 'q' => $search, 'assigned' => $assigned]) }}" class="tx-pill {{ $period === 'week' ? 'active' : '' }}">7 dias</a>
+                <a href="?{{ http_build_query(['period' => 'all', 'status' => $status, 'q' => $search, 'assigned' => $assigned]) }}" class="tx-pill {{ $period === 'all' ? 'active' : '' }}">Tudo</a>
+            </div>
+        </div>
+
+        <div class="tx-filter-group">
+            <span class="tx-filter-label">Atribuição</span>
+            <div class="tx-filter-pills">
+                <a href="?{{ http_build_query(['assigned' => 'mine', 'status' => $status, 'period' => $period, 'q' => $search]) }}" class="tx-pill {{ $assigned === 'mine' ? 'active' : '' }}">Meus</a>
+                <a href="?{{ http_build_query(['assigned' => 'unassigned', 'status' => $status, 'period' => $period, 'q' => $search]) }}" class="tx-pill {{ $assigned === 'unassigned' ? 'active' : '' }}">Sem agente</a>
+                <a href="?{{ http_build_query(['assigned' => 'all', 'status' => $status, 'period' => $period, 'q' => $search]) }}" class="tx-pill {{ $assigned === 'all' ? 'active' : '' }}">Todos</a>
             </div>
         </div>
 
         <div class="tx-search">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="period" value="{{ $period }}">
+            <input type="hidden" name="assigned" value="{{ $assigned }}">
             <input type="text" name="q" placeholder="Procurar por #ref, email, nome..." value="{{ $search }}">
             <button type="submit">Buscar</button>
         </div>
@@ -136,6 +146,7 @@ body { background:#f5f5f5; }
                         <th>Referência</th>
                         <th>Cliente</th>
                         <th>Data</th>
+                        <th>Agente</th>
                         <th>Estado</th>
                         <th>Valor Origem</th>
                         <th>Valor AOA</th>
@@ -162,6 +173,13 @@ body { background:#f5f5f5; }
                             <td style="font-size:0.75rem;color:#737373;">
                                 {{ $tx->created_at->format('d/m H:i') }}
                                 <div style="font-size:0.65rem;opacity:0.7;">{{ $tx->created_at->diffForHumans() }}</div>
+                            </td>
+                            <td style="font-size:0.75rem;">
+                                @if($tx->admin)
+                                    <span style="font-weight:600;color:#404040;">{{ Str::limit($tx->admin->full_name, 18) }}</span>
+                                @else
+                                    <span style="color:#dc2626;font-weight:600;font-size:0.7rem;">Sem agente</span>
+                                @endif
                             </td>
                             <td>
                                 @php

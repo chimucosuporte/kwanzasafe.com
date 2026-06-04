@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SendChatMessageRequest;
 use App\Models\ChatMessage;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\TransactionFlow;
 use Illuminate\Http\Request;
@@ -16,17 +17,26 @@ class TransactionAdminController extends Controller
 {
     public function index(Request $request)
     {
+        $user   = Auth::user();
         $status = $request->query('status', 'pending');
         $period = $request->query('period', 'all');
         $search = $request->query('q', '');
+        // Suporte vê os seus tíquetes por defeito; super-admin vê todos.
+        $assigned = $request->query('assigned', $user->isSupport() ? 'mine' : 'all');
 
-        $query = Transaction::with('user')
+        $query = Transaction::with('user', 'admin')
             ->withCount(['chatMessages as unread_count' => fn($q) =>
                 $q->where('is_read', false)
                   ->whereNotNull('sender_id')
                   ->whereColumn('sender_id', 'transactions.user_id')
             ])
             ->orderBy('created_at', 'desc');
+
+        if ($assigned === 'mine') {
+            $query->where('assigned_admin', $user->id);
+        } elseif ($assigned === 'unassigned') {
+            $query->whereNull('assigned_admin');
+        }
 
         if ($status === 'pending') {
             $query->whereIn('status', ['pending', 'negotiating', 'awaiting_payment', 'payment_received', 'processing', 'aoa_sent']);
@@ -54,19 +64,51 @@ class TransactionAdminController extends Controller
 
         $transactions = $query->paginate(20)->withQueryString();
 
-        return view('admin.transactions.index', compact('transactions', 'status', 'period', 'search'));
+        return view('admin.transactions.index', compact('transactions', 'status', 'period', 'search', 'assigned'));
     }
 
     public function show($id)
     {
-        $transaction = Transaction::with('user', 'chatMessages.sender')->findOrFail($id);
+        $transaction = Transaction::with('user', 'admin', 'chatMessages.sender')->findOrFail($id);
 
         $receipt = $transaction->chatMessages
             ->where('message_type', 'document')
             ->sortByDesc('created_at')
             ->first();
 
-        return view('admin.transactions.show', compact('transaction', 'receipt'));
+        // Agentes de suporte activos — para o super-admin reatribuir o tíquete.
+        $agents = User::where('is_admin', true)
+            ->where('is_super_admin', false)
+            ->where('is_active', true)
+            ->orderBy('full_name')
+            ->get(['id', 'full_name']);
+
+        return view('admin.transactions.show', compact('transaction', 'receipt', 'agents'));
+    }
+
+    /**
+     * Reatribuir o tíquete a um agente de suporte específico (super-admin).
+     */
+    public function reassign(Request $request, $id)
+    {
+        $request->validate(['agent_id' => ['required', 'integer']]);
+
+        $transaction = Transaction::findOrFail($id);
+
+        $agent = User::where('is_admin', true)
+            ->where('is_super_admin', false)
+            ->where('is_active', true)
+            ->findOrFail($request->agent_id);
+
+        $transaction->update(['assigned_admin' => $agent->id]);
+
+        AuditLogger::transaction('reassigned',
+            "Transação #{$transaction->reference_id} reatribuída ao agente {$agent->full_name}",
+            $transaction,
+            ['agent_id' => $agent->id, 'by' => Auth::id()]
+        );
+
+        return back()->with('success', "Tíquete reatribuído a {$agent->full_name}.");
     }
 
     public function requestPayment($id)

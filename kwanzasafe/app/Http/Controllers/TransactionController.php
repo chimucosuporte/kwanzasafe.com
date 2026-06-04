@@ -8,6 +8,7 @@ use App\Models\ChatMessage;
 use App\Models\ExchangeRate;
 use App\Models\Transaction;
 use App\Services\AuditLogger;
+use App\Services\TicketAssignment;
 use App\Services\TransactionFlow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -72,6 +73,16 @@ class TransactionController extends Controller
             $transaction,
             'A tua transação foi criada com sucesso. Um agente KwanzaSafe irá contactar-te aqui em breve para prosseguir com o envio.'
         );
+
+        // Atribuição automática a um agente de suporte (round-robin menos ocupado)
+        $agent = TicketAssignment::assign($transaction);
+        if ($agent) {
+            AuditLogger::transaction('auto_assigned',
+                "Transação #{$referenceId} atribuída automaticamente ao agente {$agent->full_name}",
+                $transaction,
+                ['agent_id' => $agent->id]
+            );
+        }
 
         AuditLogger::transaction('created',
             "Nova transação #{$referenceId}: {$valorEnviar} {$taxa->currency_from} → {$valorReceber} AOA",
