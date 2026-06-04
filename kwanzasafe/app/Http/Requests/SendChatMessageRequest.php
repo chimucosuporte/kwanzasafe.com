@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class SendChatMessageRequest extends FormRequest
 {
@@ -16,6 +17,7 @@ class SendChatMessageRequest extends FormRequest
         return [
             'message_text' => 'nullable|string|max:2000',
             'attachment'   => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+            'channel'      => ['nullable', Rule::in(['client', 'internal'])],
         ];
     }
 

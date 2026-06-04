@@ -14,6 +14,8 @@ use App\Http\Controllers\Admin\MessageAdminController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\BeneficiaryController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\RecourseController;
+use App\Http\Controllers\Admin\RecourseAdminController;
 use App\Http\Controllers\AuditController;
 use App\Models\Transaction;
 use App\Models\ExchangeRate;
@@ -78,6 +80,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/transaction/{reference_id}/cancel',  [TransactionController::class, 'cancel'])        ->name('transaction.cancel');
     Route::get('/transaction/{reference_id}/receipt', [TransactionController::class, 'receipt'])       ->name('transaction.receipt');
 
+    Route::post('/transaction/{reference_id}/recourse',       [RecourseController::class, 'open']) ->name('recourse.open');
+    Route::post('/transaction/{reference_id}/recourse/reply', [RecourseController::class, 'reply'])->name('recourse.reply');
+
     Route::post('/transaction/{reference_id}/chat', [ChatController::class, 'sendMessage'])->name('chat.send');
     Route::post('/transaction/{reference_id}/read', [ChatController::class, 'markAsRead']) ->name('chat.read');
     Route::get('/transaction/{reference_id}/poll',  [ChatController::class, 'poll'])       ->name('chat.poll');
@@ -118,6 +123,12 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
         Route::delete('/staff/{id}',            [StaffAdminController::class, 'destroy'])     ->name('staff.destroy');
 
         Route::post('/transaction/{id}/reassign', [TransactionAdminController::class, 'reassign'])->name('transaction.reassign');
+
+        // Arbitragem de recursos
+        Route::get('/recourses',              [RecourseAdminController::class, 'index'])  ->name('recourses.index');
+        Route::post('/recourses/{id}/reply',  [RecourseAdminController::class, 'reply'])  ->name('recourses.reply');
+        Route::post('/recourses/{id}/resolve', [RecourseAdminController::class, 'resolve'])->name('recourses.resolve');
+        Route::post('/recourses/{id}/reject', [RecourseAdminController::class, 'reject']) ->name('recourses.reject');
     });
 
     // Utilizadores

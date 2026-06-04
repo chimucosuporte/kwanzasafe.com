@@ -42,6 +42,7 @@ class ChatController extends Controller
             'sender_id'      => Auth::id(),
             'message_text'   => $request->message_text,
             'message_type'   => 'text',
+            'channel'        => 'client',
             'is_read'        => false,
         ];
 
@@ -100,13 +101,18 @@ class ChatController extends Controller
         $afterId = max(0, (int) $request->query('after', 0));
         $userId  = Auth::id();
 
+        // O cliente só vê os canais 'client' e 'recourse' — nunca notas internas.
+        $visible = ['client', 'recourse'];
+
         $messages = ChatMessage::where('transaction_id', $transaction->id)
+            ->whereIn('channel', $visible)
             ->where('id', '>', $afterId)
             ->orderBy('created_at', 'asc')
             ->get();
 
         if ($messages->isNotEmpty()) {
             ChatMessage::where('transaction_id', $transaction->id)
+                ->whereIn('channel', $visible)
                 ->where('id', '>', $afterId)
                 ->where(fn($q) => $q->whereNull('sender_id')->orWhere('sender_id', '!=', $userId))
                 ->where('is_read', false)
@@ -137,8 +143,10 @@ class ChatController extends Controller
                                   ->where('user_id', Auth::id())
                                   ->firstOrFail();
 
-        // Marcar como lidas apenas mensagens recebidas (não enviadas pelo cliente)
+        // Marcar como lidas apenas mensagens recebidas (não enviadas pelo cliente),
+        // e apenas dos canais que o cliente vê (nunca notas internas).
         ChatMessage::where('transaction_id', $transaction->id)
+                   ->whereIn('channel', ['client', 'recourse'])
                    ->where('sender_id', '!=', Auth::id())
                    ->where('is_read', false)
                    ->update(['is_read' => true]);

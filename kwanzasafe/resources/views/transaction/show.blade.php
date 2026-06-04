@@ -7,19 +7,33 @@
 --}}
 
 @php
+    // O cliente só vê os canais 'client' e 'recourse' — nunca notas internas do staff.
+    $clientChannels = ['client', 'recourse'];
+
     // Carregar mensagens da conversa
     $messages = \App\Models\ChatMessage::with('sender')
         ->where('transaction_id', $transaction->id)
+        ->whereIn('channel', $clientChannels)
         ->orderBy('created_at', 'asc')
         ->get();
 
     // Marcar mensagens do admin como lidas (cliente está a ver)
     \App\Models\ChatMessage::where('transaction_id', $transaction->id)
+        ->whereIn('channel', $clientChannels)
         ->where('sender_id', '!=', auth()->id())
         ->where('is_read', false)
         ->update(['is_read' => true]);
 
     $currentUserId = auth()->id();
+
+    // Recurso activo (se houver) sobre esta transação
+    $activeRecourse = \App\Models\Recourse::where('transaction_id', $transaction->id)
+        ->whereIn('status', ['open', 'in_review'])
+        ->latest()
+        ->first();
+    $lastRecourse = $activeRecourse ?? \App\Models\Recourse::where('transaction_id', $transaction->id)
+        ->latest()
+        ->first();
 @endphp
 
 <style>
@@ -425,6 +439,51 @@
                     </button>
                 </div>
             </form>
+        </div>
+
+        {{-- ===== RECURSO ===== --}}
+        <div class="tr-card" x-data="{ openForm: false }">
+            <div class="tr-card__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6l9-4 9 4M4 10v8m16-8v8M4 18h16M9 10v8m6-8v8"/></svg>
+                Recurso
+            </div>
+
+            @if($activeRecourse)
+                <div class="tr-alert info" style="margin-bottom:0.875rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01"/><circle cx="12" cy="12" r="9"/></svg>
+                    <span>Tens um recurso <strong>{{ $activeRecourse->status === 'open' ? 'aberto' : 'em análise' }}</strong>. Um super-administrador irá responder-te aqui no chat. Podes acrescentar informação abaixo.</span>
+                </div>
+                <form method="POST" action="{{ route('recourse.reply', $transaction->reference_id) }}" style="display:flex;gap:0.5rem;align-items:flex-end;">
+                    @csrf
+                    <textarea name="message_text" rows="2" required placeholder="Acrescenta informação ao teu recurso..." class="tr-chat-form__textarea" style="flex:1;"></textarea>
+                    <button type="submit" class="tr-chat-form__btn" title="Enviar ao super-admin">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </form>
+            @elseif($lastRecourse && in_array($lastRecourse->status, ['resolved','rejected']))
+                <div class="tr-alert {{ $lastRecourse->status === 'resolved' ? 'success' : 'warn' }}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/></svg>
+                    <span>
+                        <strong>Recurso {{ $lastRecourse->status === 'resolved' ? 'resolvido' : 'indeferido' }}.</strong>
+                        @if($lastRecourse->resolution) {{ $lastRecourse->resolution }} @endif
+                    </span>
+                </div>
+            @elseif(!in_array($transaction->status, ['completed','cancelled','expired']))
+                <p style="font-size:0.8rem;color:#64748b;line-height:1.6;margin-bottom:0.75rem;">
+                    Sentes que houve uma falha ou injustiça nesta transação? Abre um recurso e um super-administrador irá analisar o teu caso pessoalmente.
+                </p>
+                <button type="button" class="tr-back-btn" @click="openForm = !openForm" style="border:1px solid #e2e8f0;padding:0.5rem 0.875rem;border-radius:10px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5"/></svg>
+                    Abrir recurso
+                </button>
+                <form method="POST" action="{{ route('recourse.open', $transaction->reference_id) }}" x-show="openForm" x-cloak style="margin-top:0.875rem;">
+                    @csrf
+                    <textarea name="reason" rows="3" required maxlength="2000" placeholder="Descreve o que correu mal..." class="tr-chat-form__textarea" style="width:100%;"></textarea>
+                    <button type="submit" class="tr-upload-btn" style="margin-top:0.625rem;">Submeter Recurso</button>
+                </form>
+            @else
+                <p style="font-size:0.8rem;color:#94a3b8;">Não há recursos para esta transação.</p>
+            @endif
         </div>
 
         {{-- Suporte WhatsApp (alternativo) --}}

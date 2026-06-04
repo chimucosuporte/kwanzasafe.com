@@ -3,12 +3,17 @@
 @php
     $client = $transaction->user ?? \App\Models\User::find($transaction->user_id);
 
+    // Canais visíveis a este membro do staff (suporte: client+internal; super-admin: tudo).
+    $visibleChannels = \App\Models\ChatMessage::visibleChannelsFor(auth()->user());
+
     $messages = \App\Models\ChatMessage::with('sender')
         ->where('transaction_id', $transaction->id)
+        ->whereIn('channel', $visibleChannels)
         ->orderBy('created_at', 'asc')
         ->get();
 
     \App\Models\ChatMessage::where('transaction_id', $transaction->id)
+        ->whereIn('channel', $visibleChannels)
         ->where('sender_id', '!=', auth()->id())
         ->where('is_read', false)
         ->update(['is_read' => true]);
@@ -550,6 +555,11 @@ body { background:#f8fafc; }
                                         </div>
                                         <div class="atx-msg__meta">
                                             <span>{{ $msg->created_at->format('d/m H:i') }}</span>
+                                            @if($msg->channel === 'internal')
+                                                <span style="background:#fef3c7;color:#92400e;font-size:0.55rem;font-weight:800;padding:1px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:0.04em;">Nota interna</span>
+                                            @elseif($msg->channel === 'recourse')
+                                                <span style="background:#ede9fe;color:#6d28d9;font-size:0.55rem;font-weight:800;padding:1px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:0.04em;">Recurso</span>
+                                            @endif
                                             @if($isMine && $msg->is_read)
                                                 <span style="color:#10b981;">✓✓</span>
                                             @elseif($isMine)
@@ -571,8 +581,25 @@ body { background:#f8fafc; }
                     <button type="button" class="atx-qr-btn" @click="setQuick('Precisamos de confirmar a conta bancária de destino. Podes verificar o IBAN registado?')">🏦 IBAN</button>
                 </div>
 
-                <form method="POST" action="{{ ks_route('admin.chat.send', $transaction->id, url('/admin/transaction/'.$transaction->id.'/chat')) }}" enctype="multipart/form-data" class="atx-chat-form" x-data="{attachmentName:''}">
+                <form method="POST" action="{{ ks_route('admin.chat.send', $transaction->id, url('/admin/transaction/'.$transaction->id.'/chat')) }}" enctype="multipart/form-data" class="atx-chat-form" x-data="{attachmentName:'', channel:'client'}">
                     @csrf
+                    <input type="hidden" name="channel" :value="channel">
+
+                    {{-- Selector de canal: mensagem ao cliente vs nota interna do staff --}}
+                    <div style="display:flex;gap:0.375rem;margin-bottom:0.5rem;">
+                        <button type="button" @click="channel='client'"
+                                :style="channel==='client' ? 'background:#065f46;color:#fff;border-color:#065f46;' : ''"
+                                style="border:1px solid #e2e8f0;background:#fff;color:#64748b;padding:3px 10px;border-radius:20px;font-size:0.65rem;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.04em;">
+                            💬 Cliente
+                        </button>
+                        <button type="button" @click="channel='internal'"
+                                :style="channel==='internal' ? 'background:#92400e;color:#fff;border-color:#92400e;' : ''"
+                                style="border:1px solid #e2e8f0;background:#fff;color:#64748b;padding:3px 10px;border-radius:20px;font-size:0.65rem;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.04em;">
+                            🔒 Nota interna
+                        </button>
+                        <span x-show="channel==='internal'" x-cloak style="font-size:0.62rem;color:#92400e;align-self:center;">Visível só para o staff</span>
+                    </div>
+
                     <template x-if="attachmentName">
                         <div class="atx-chat-form__preview">
                             <span>📎</span>

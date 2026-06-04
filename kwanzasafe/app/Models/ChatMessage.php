@@ -15,9 +15,27 @@ class ChatMessage extends Model
         'sender_id',
         'message_text',
         'message_type',    // 'text' | 'image' | 'document'
+        'channel',         // 'client' | 'internal' | 'recourse'
         'file_path',
         'is_read',
     ];
+
+    /**
+     * Canais que um determinado utilizador pode ver numa transação.
+     *  - super-admin: tudo
+     *  - suporte: cliente + notas internas (nunca recurso)
+     *  - cliente: a sua conversa + o seu recurso
+     */
+    public static function visibleChannelsFor(User $viewer): array
+    {
+        if ($viewer->isSuperAdmin()) {
+            return ['client', 'internal', 'recourse'];
+        }
+        if ($viewer->isStaff()) {
+            return ['client', 'internal'];
+        }
+        return ['client', 'recourse'];
+    }
 
     protected $casts = [
         'is_read'    => 'boolean',

@@ -243,13 +243,18 @@ class TransactionAdminController extends Controller
         $afterId     = max(0, (int) $request->query('after', 0));
         $adminId     = Auth::id();
 
+        // Filtra pelos canais que este membro do staff pode ver.
+        $visible = ChatMessage::visibleChannelsFor(Auth::user());
+
         $messages = ChatMessage::where('transaction_id', $transaction->id)
+            ->whereIn('channel', $visible)
             ->where('id', '>', $afterId)
             ->orderBy('created_at', 'asc')
             ->get();
 
         if ($messages->isNotEmpty()) {
             ChatMessage::where('transaction_id', $transaction->id)
+                ->whereIn('channel', $visible)
                 ->where('id', '>', $afterId)
                 ->whereNotNull('sender_id')
                 ->where('sender_id', '!=', $adminId)
@@ -276,15 +281,21 @@ class TransactionAdminController extends Controller
     {
         $transaction = Transaction::findOrFail($id);
 
+        // Canal: 'client' (visível ao cliente) ou 'internal' (nota interna do staff).
+        $channel = in_array($request->input('channel'), ['client', 'internal'], true)
+            ? $request->input('channel')
+            : 'client';
+
         $data = [
             'transaction_id' => $transaction->id,
             'sender_id'      => Auth::id(),
             'message_text'   => $request->message_text,
             'message_type'   => 'text',
+            'channel'        => $channel,
             'is_read'        => false,
         ];
 
-        $meta = ['transaction_ref' => $transaction->reference_id];
+        $meta = ['transaction_ref' => $transaction->reference_id, 'channel' => $channel];
 
         if ($request->hasFile('attachment')) {
             $file         = $request->file('attachment');
