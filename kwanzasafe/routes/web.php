@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\TransactionAdminController;
 use App\Http\Controllers\Admin\KycAdminController;
 use App\Http\Controllers\Admin\RateAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
+use App\Http\Controllers\Admin\StaffAdminController;
 use App\Http\Controllers\Admin\MessageAdminController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\BeneficiaryController;
@@ -108,6 +109,14 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
     Route::post('/transaction/{id}/assign',           [TransactionAdminController::class, 'assign'])           ->name('transaction.assign');
     Route::post('/transaction/{id}/chat',             [TransactionAdminController::class, 'sendChatMessage'])  ->name('chat.send');
     Route::get('/transaction/{id}/poll',              [TransactionAdminController::class, 'poll'])              ->name('transaction.poll');
+
+    // ===== Exclusivo do Super-Admin =====
+    Route::middleware('is_super_admin')->group(function () {
+        Route::get('/staff',                    [StaffAdminController::class, 'index'])       ->name('staff.index');
+        Route::post('/staff',                   [StaffAdminController::class, 'store'])       ->name('staff.store');
+        Route::post('/staff/{id}/toggle-active', [StaffAdminController::class, 'toggleActive'])->name('staff.toggle_active');
+        Route::delete('/staff/{id}',            [StaffAdminController::class, 'destroy'])     ->name('staff.destroy');
+    });
 
     // Utilizadores
     Route::get('/users',               [UserAdminController::class, 'index'])      ->name('users.index');

@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'full_name', 'name', 'email', 'password', 'balance',
@@ -19,7 +20,7 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'province', 'municipality', 'address',
         'identity_document_path', 'identity_verified_at',
         'profile_photo_path', 'data_verified',
-        'is_admin', 'is_fully_verified',
+        'is_admin', 'is_super_admin', 'is_active', 'is_fully_verified',
         'kyc_score',
         'kyc_bot_status',
         'kyc_bot_analyzed_at',
@@ -43,6 +44,8 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'bi_expiry'           => 'date',
         'data_verified'       => 'boolean',
         'is_admin'            => 'boolean',
+        'is_super_admin'      => 'boolean',
+        'is_active'           => 'boolean',
         'is_fully_verified'   => 'boolean',
         'balance'             => 'decimal:2',
         'kyc_bot_analyzed_at' => 'datetime',
@@ -86,6 +89,63 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
     }
 
     // ============================================================
+    // Papéis (Fase 0 — multi-equipa)
+    // ============================================================
+
+    /**
+     * Mantém is_admin / is_super_admin / role coerentes em qualquer save.
+     * Fonte da verdade: os booleanos. role é espelho para leitura/audit.
+     *   super_admin ⇒ admin.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->is_super_admin) {
+                $user->is_admin = true;
+                $user->role     = 'super_admin';
+            } elseif ($user->is_admin) {
+                $user->role = 'admin';
+            } else {
+                $user->role = 'client';
+            }
+        });
+    }
+
+    /** Admin máximo — acesso total, gere staff e arbitra recursos. */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
+    }
+
+    /** Funcionário de suporte — admin de nível baixo (não super-admin). */
+    public function isSupport(): bool
+    {
+        return $this->is_admin && ! $this->is_super_admin;
+    }
+
+    /** Qualquer membro da equipa (suporte ou super-admin). */
+    public function isStaff(): bool
+    {
+        return (bool) $this->is_admin;
+    }
+
+    /** Cliente final. */
+    public function isClient(): bool
+    {
+        return ! $this->is_admin;
+    }
+
+    /** Rótulo legível do papel. */
+    public function roleLabel(): string
+    {
+        return match (true) {
+            $this->isSuperAdmin() => 'Super-Admin',
+            $this->isSupport()    => 'Suporte',
+            default               => 'Cliente',
+        };
+    }
+
+    // ============================================================
     // Relações
     // ============================================================
     public function beneficiaries()
@@ -96,6 +156,12 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    /** Tíquetes/transações atribuídos a este membro do staff (suporte). */
+    public function assignedTransactions()
+    {
+        return $this->hasMany(Transaction::class, 'assigned_admin');
     }
 
     /**

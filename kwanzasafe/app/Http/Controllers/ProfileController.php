@@ -50,7 +50,10 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        // Hard delete: o cliente que elimina a própria conta quer os dados
+        // removidos definitivamente (privacidade). O soft delete fica reservado
+        // à eliminação de contas de staff pelo super-admin.
+        $user->forceDelete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

@@ -36,6 +36,24 @@ class UserFactory extends Factory
         return $this->state(fn () => ['is_admin' => true, 'role' => 'admin']);
     }
 
+    /** Funcionário de suporte (admin de nível baixo). */
+    public function support(): static
+    {
+        return $this->state(fn () => ['is_admin' => true, 'is_super_admin' => false, 'role' => 'admin']);
+    }
+
+    /** Admin máximo. */
+    public function superAdmin(): static
+    {
+        return $this->state(fn () => ['is_admin' => true, 'is_super_admin' => true, 'role' => 'super_admin']);
+    }
+
+    /** Conta desactivada. */
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
+    }
+
     public function kycIncomplete(): static
     {
         return $this->state(fn () => [
