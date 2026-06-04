@@ -30,7 +30,7 @@
 | **Auth** | Laravel Breeze | 1.29 |
 | **API tokens** | Laravel Sanctum | 3.2 |
 | **Build tool** | Vite | 4.0 (só dev) |
-| **Testes** | PHPUnit + Pest | 10.x (**96 testes a passar**) |
+| **Testes** | PHPUnit + Pest | 10.x (**141 testes a passar**) |
 
 ---
 
@@ -130,13 +130,14 @@ C:\wamp64\www\kwanzasa.com\          ← Raiz do Git
 
 ---
 
-## 7. Services (5)
+## 7. Services (6)
 
 | Service | Função | Notas |
 |---|---|---|
 | `AuditLogger` | Audit logging imutável com helpers por categoria | Nunca lança exceção |
 | `KycBot` | Análise automática KYC (0-100 pontos, 8 critérios) | Limiares: ≥80 aprova, 50-79 review, <50 rejeita |
 | `OtpService` | Geração, envio e validação de OTP email | Rate limit 3/hora, max 5 tentativas, expiry 15min |
+| `TicketAssignment` | Round-robin "menos ocupado" de tíquetes a agentes de suporte activos | Fallback: sem agente → fila |
 | `TransactionFlow` | Máquina de estados da transação | Valida transições, mensagem de sistema automática, timestamps, audit, email de estado, ledger ao concluir |
 | `LedgerService` | Registo contabilístico ao concluir transação | `recordTransactionCompleted()` |
 
@@ -205,8 +206,9 @@ resources/views/
 
 ## 10. Middleware Custom
 
-- `IsAdmin` — verifica `Auth::user()->is_admin`; redireciona com erro se falhar
-- Alias `is_admin` registado no Kernel e **aplicado no grupo de rotas admin** (`['auth', 'is_admin']`)
+- `IsAdmin` — verifica `Auth::user()->is_admin` (staff: suporte ou super-admin); aplicado no grupo `/admin`
+- `IsSuperAdmin` — verifica `Auth::user()->isSuperAdmin()`; aplicado a sub-rotas exclusivas (staff, recursos, reassign). Suporte → redirect `admin.dashboard`; cliente → `dashboard`
+- Aliases `is_admin` e `is_super_admin` registados no Kernel
 
 ---
 
@@ -320,5 +322,44 @@ php artisan up
 | Sprint 3A | Dashboard cliente, painel admin, taxas, chat básico |
 | Sprint 3B | Sala de transação, admin vivo com AJAX, audit trail UI |
 | Sprint K–N | Cancelar/auto-expiry, comprovativo imprimível, perfil admin, agente, painel financeiro, soft deletes, OTP telefone, ledger, `is_fully_verified`, Tailwind compilado |
-| Sprint N+ | `TransactionFlow` (máquina de estados), controllers admin divididos, `is_admin` nas rotas, 96 testes a passar |
-| **PRÓXIMO** | Refactor corporativo das views (perfil, admin rates/edit, limpeza Breeze), SEO |
+| Sprint N+ | `TransactionFlow` (máquina de estados), controllers admin divididos, `is_admin` nas rotas |
+| Refactor views | Perfil corporativo, admin rates/edit, audit alinhado à marca |
+| **Multi-equipa (Fases 0–5)** | Papéis (suporte/super-admin), gestão de funcionários, round-robin, canais (notas internas, recurso, staff DMs), navegação por papel — **141 testes** (ver §19) |
+| **PRÓXIMO** | SEO, aplicar migrações em prod, substituir IBAN placeholder |
+
+---
+
+## 19. Arquitectura Multi-Equipa (Fases 0–5)
+
+> Plataforma com 3 entidades e 4 canais de comunicação. **6 migrações novas** (`2026_06_04_*`) ainda por aplicar fora do ambiente de teste.
+
+### Papéis (booleanos como fonte da verdade; `role` é espelho)
+| Papel | Flags | Pode |
+|---|---|---|
+| **Cliente** | `is_admin=0` | Transacionar, falar no tíquete, abrir recurso |
+| **Suporte** | `is_admin=1, is_super_admin=0` | Atender tíquetes, notas internas, DM a super-admin, escalar |
+| **Super-Admin** | `is_super_admin=1` (⇒`is_admin=1`) | Tudo + gerir funcionários, arbitrar recursos, DM a qualquer staff |
+
+- `User`: `isClient()/isSupport()/isStaff()/isSuperAdmin()`, `roleLabel()`; `booted()` força super⇒admin e espelha `role`. `SoftDeletes` activo (cliente self-delete = `forceDelete`; staff = soft).
+- Coluna `users.is_active` desactiva contas de suporte sem eliminar.
+
+### Canais de conversa — `chat_messages.channel` + `staff_messages`
+| Canal | Coluna/tabela | Visível a |
+|---|---|---|
+| Tíquete cliente↔suporte | `channel='client'` | cliente, suporte, super-admin |
+| Notas internas | `channel='internal'` | suporte, super-admin (**nunca** cliente) |
+| Recurso | `channel='recourse'` | cliente, super-admin (**nunca** suporte) |
+| Staff geral (DM) | tabela `staff_messages` | os 2 participantes |
+
+> Regra central: `ChatMessage::visibleChannelsFor($user)`. Os polls (cliente e admin) e as páginas filtram **sempre** por aqui — testes de privacidade em `RecourseTest`.
+
+### Tabelas novas
+- `recourses` — caso de recurso (`status`: open→in_review→resolved|rejected, `reason`, `resolution`, `resolved_at`).
+- `staff_messages` — DM staff (`sender_id`, `recipient_id`, `body`, `is_read`).
+
+### Controllers/Serviços novos
+- `Admin\StaffAdminController` (gerir funcionários, super-admin), `Admin\RecourseAdminController` (arbitrar, super-admin), `Admin\StaffChatController` (DMs, staff), `RecourseController` (cliente).
+- `TicketAssignment` (round-robin), `StaffMessage::canMessage()` (suporte→só super-admin).
+
+### Atribuição
+- Round-robin "menos ocupado" entre suporte activo na criação da transação (`assigned_admin`). Super-admin reatribui via `/admin/transaction/{id}/reassign`. Index admin com filtro `assigned` (mine/unassigned/all).
