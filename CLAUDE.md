@@ -1,6 +1,6 @@
 # KwanzaSafe — Memória Mestre do Projeto
 
-> Gerado em auditoria completa — 2026-05-12. Actualizar após cada sprint.
+> Gerado em auditoria completa — 2026-05-12. Última actualização — 2026-06-04. Actualizar após cada sprint.
 
 ---
 
@@ -30,7 +30,7 @@
 | **Auth** | Laravel Breeze | 1.29 |
 | **API tokens** | Laravel Sanctum | 3.2 |
 | **Build tool** | Vite | 4.0 (só dev) |
-| **Testes** | PHPUnit | 10.x (0 testes escritos) |
+| **Testes** | PHPUnit + Pest | 10.x (**96 testes a passar**) |
 
 ---
 
@@ -70,10 +70,10 @@ C:\wamp64\www\kwanzasa.com\          ← Raiz do Git
 **`users`** (campos confirmados na migração):
 `id`, `full_name`, `email`(unique), `phone`(unique,nullable), `password`, `role`(enum:client/admin/super_admin), `status`, `kyc_status`, `country`, `avatar_path`, `email_verified_at`, `last_login_at`, `last_login_ip`, `remember_token`, `deleted_at`(softdelete), `is_admin`(bool), `balance`(decimal), `phone_number`, `phone_verified_at`, `identity_document_path`, `identity_verified_at`, `profile_photo_path`, `is_fully_verified`(bool), `birth_date`, `gender`(M/F/Outro), `bi_number`(unique,nullable), `bi_expiry`, `province`, `municipality`, `address`, `data_verified`(bool), `kyc_score`(0-100), `kyc_bot_status`(auto_approved/pending_review/auto_rejected), `kyc_bot_analyzed_at`, `kyc_bot_notes`(JSON)
 
-**`transactions`** (estados ACTUAIS na BD — 6, não 8):
-`id`, `reference_id`(unique,KZ+5chars), `user_id`, `assigned_admin`(nullable), `exchange_rate_id`(nullable), `currency_from`, `currency_to`, `amount_sent`, `rate_applied`, `amount_received`, `fee_amount`(default 0), `status`(enum: **pending|awaiting_payment|processing|completed|cancelled|expired**), `expires_at`(nullable), `created_at`, `updated_at`
+**`transactions`** (fluxo completo já implementado):
+`id`, `reference_id`(unique,KZ+5chars), `user_id`, `assigned_admin`(nullable), `exchange_rate_id`(nullable), `currency_from`, `currency_to`, `amount_sent`, `rate_applied`, `amount_received`, `fee_amount`(default 0), `status`(enum: **pending|negotiating|awaiting_payment|payment_received|processing|aoa_sent|completed|cancelled|expired**), `expires_at`(nullable), `payment_received_at`, `aoa_sent_at`, `client_confirmed_at`, `created_at`, `updated_at`
 
-> ⚠️ Os estados `negotiating`, `payment_received`, `aoa_sent` e os campos `payment_received_at`, `aoa_sent_at`, `client_confirmed_at` ainda **NÃO existem na BD** — pertencem ao fluxo novo ainda a implementar.
+> ✅ Os estados `negotiating`, `payment_received`, `aoa_sent` e os timestamps `payment_received_at`, `aoa_sent_at`, `client_confirmed_at` **já existem na BD** e são geridos pelo serviço `TransactionFlow` (ver §7).
 
 **`beneficiaries`**: `id`, `user_id`, `bank_name`, `iban`, `holder_name`, `created_at`, `updated_at`
 
@@ -91,19 +91,28 @@ C:\wamp64\www\kwanzasa.com\          ← Raiz do Git
 
 ---
 
-## 5. Controllers (18)
+## 5. Controllers
 
-| Controller | Responsabilidade | Linhas |
-|---|---|---|
-| `AdminController` | Dashboard, transações, KYC, taxas, utilizadores, chat admin | 455 |
-| `AuditController` | Vista e filtros de audit logs | 121 |
-| `BeneficiaryController` | Gestão de IBANs com anti-fraude | 102 |
-| `ChatController` | Mensagens cliente em transação | 101 |
-| `OtpController` | Verificação OTP por email | 81 |
-| `ProfileController` | Perfil do utilizador | 60 |
-| `TransactionController` | Criar, ver, upload comprovativo | 131 |
-| `VerificationController` | KYC 4 passos + KycBot | 146 |
-| Auth/* | Breeze standard (8 controllers) | — |
+> O painel admin já **não é monolítico**: foi dividido em controllers dedicados no namespace `App\Http\Controllers\Admin\*`.
+
+| Controller | Responsabilidade |
+|---|---|
+| `AdminController` | Dashboard admin + `statsJson` (stats AJAX) |
+| `Admin\TransactionAdminController` | Lista/tíquetes, detalhe, transições de estado, chat admin, poll |
+| `Admin\KycAdminController` | Revisão KYC (index/show/approve/reject) |
+| `Admin\RateAdminController` | Gestão de taxas |
+| `Admin\UserAdminController` | Utilizadores (index/show/toggle-admin) |
+| `Admin\MessageAdminController` | Mensagens não lidas |
+| `AuditController` | Vista e filtros de audit logs |
+| `BeneficiaryController` | Gestão de IBANs com anti-fraude |
+| `ChatController` | Mensagens cliente em transação + poll/markAsRead |
+| `OtpController` | Verificação OTP por email |
+| `ProfileController` | Perfil do utilizador |
+| `TransactionController` | Criar, ver, upload comprovativo, confirmar, cancelar, recibo |
+| `VerificationController` | KYC 4 passos + KycBot |
+| Auth/* | Breeze standard |
+
+**Form Requests dedicados:** `CreateTransactionRequest`, `SendChatMessageRequest`, `ProfileUpdateRequest`.
 
 ---
 
@@ -121,15 +130,17 @@ C:\wamp64\www\kwanzasa.com\          ← Raiz do Git
 
 ---
 
-## 7. Services (3)
+## 7. Services (5)
 
 | Service | Função | Notas |
 |---|---|---|
 | `AuditLogger` | Audit logging imutável com helpers por categoria | Nunca lança exceção |
 | `KycBot` | Análise automática KYC (0-100 pontos, 8 critérios) | Limiares: ≥80 aprova, 50-79 review, <50 rejeita |
 | `OtpService` | Geração, envio e validação de OTP email | Rate limit 3/hora, max 5 tentativas, expiry 15min |
+| `TransactionFlow` | Máquina de estados da transação | Valida transições, mensagem de sistema automática, timestamps, audit, email de estado, ledger ao concluir |
+| `LedgerService` | Registo contabilístico ao concluir transação | `recordTransactionCompleted()` |
 
-> ⚠️ **`TransactionFlow` service mencionado no briefing NÃO existe** — a criar na Fase 3.
+> ✅ **`TransactionFlow` já existe.** Usar sempre `TransactionFlow::transition($tx, $novoEstado, $actor)` para mudar estado e `TransactionFlow::systemMessage($tx, $texto)` para mensagens de sistema (sender_id null). Transições válidas definidas em `ALLOWED_TRANSITIONS`.
 
 ---
 
@@ -181,10 +192,10 @@ resources/views/
 - `GET|POST /verify/email{/send|/submit}` → OtpController
 
 ### Admin (prefix: /admin, name: admin.)
-> ⚠️ Só middleware `auth` no grupo de rotas — verificação `is_admin` apenas no constructor do AdminController
+> ✅ O grupo aplica middleware `['auth', 'is_admin']` directamente nas rotas.
 - `/admin/dashboard`, `/admin/stats.json`
-- `/admin/transactions`, `/admin/transaction/{id}`, `/admin/transaction/{id}/approve`, `/admin/transaction/{id}/chat`
-- `/admin/users`
+- `/admin/transactions`, `/admin/transaction/{id}`, `/admin/transaction/{id}/{approve|cancel|assign|request-payment|payment-received|aoa-sent|chat|poll|receipt}`
+- `/admin/users`, `/admin/users/{id}`, `/admin/users/{id}/toggle-admin`
 - `/admin/messages/unread`
 - `/admin/rates`, `/admin/rates/{id}/edit`, `/admin/rates/{id}` (PUT)
 - `/admin/kyc`, `/admin/kyc/{userId}`, `/admin/kyc/{userId}/approve|reject`
@@ -195,8 +206,7 @@ resources/views/
 ## 10. Middleware Custom
 
 - `IsAdmin` — verifica `Auth::user()->is_admin`; redireciona com erro se falhar
-- Usado: No constructor do `AdminController` (inline, não via alias)
-- Alias `is_admin` registado no Kernel mas **não aplicado nas rotas**
+- Alias `is_admin` registado no Kernel e **aplicado no grupo de rotas admin** (`['auth', 'is_admin']`)
 
 ---
 
@@ -254,29 +264,30 @@ resources/views/
 
 ---
 
-## 15. Fluxo de Transação Actual (implementado)
+## 15. Fluxo de Transação (IMPLEMENTADO — gerido por `TransactionFlow`)
 
 ```
-1. Cliente cria via TransactionController@store → status: pending
-2. Cliente envia comprovativo via uploadReceipt → status: processing
-3. Admin aprova via AdminController@approve → status: completed
+1. Cliente usa a calculadora no dashboard (moeda + valor → vê AOA a receber)
+2. Clica "Iniciar Transação" → TransactionController@store cria pending
+   → mensagem automática de sistema → redirect Sala de Transação
+   (bloqueado se email/KYC incompletos)
+3. Chat bidireccional cliente ↔ admin (polling 5s, som, recibos ✓✓)
+4. Admin vê o tíquete em /admin/transactions (filtro Pendentes + badge de não lidas)
+5. Cliente envia comprovativo (uploadReceipt) → awaiting_payment
+6. Admin "Recebi pagamento" → payment_received
+7. Admin "AOA enviados" → aoa_sent (+ email ao cliente)
+8. Cliente "Confirmar Recepção" → completed (+ registo no ledger + recibo imprimível)
+Estados extra: negotiating, cancelled (cliente/admin), expired
 ```
 
-## 16. Fluxo de Transação NOVO (a implementar — Fase 3)
+> Transições válidas e mensagens de sistema centralizadas em `TransactionFlow::ALLOWED_TRANSITIONS` / `SYSTEM_MESSAGES`.
+> Cobertura: `tests/Feature/TransactionTest.php` e `ChatTest.php` (criação, KYC/email gating, valor mínimo, mensagem de sistema automática, chat cliente e admin, confirmação de recepção).
 
-```
-1. Cliente selecciona moeda + valor na calculadora
-2. Clica "Iniciar Transação" → cria pending → redirect Sala de Transação
-3. Mensagem automática do sistema na sala
-4. [negociação via chat]
-5. Cliente confirma pagamento → awaiting_payment
-6. Admin clica "Recebi pagamento" → payment_received (novo estado)
-7. Admin envia AOA → aoa_sent (novo estado)
-8. Cliente confirma recepção → completed
-Estados adicionais: negotiating, cancelled, expired
-```
+## 16. Pontos em aberto / a confirmar antes de produção
 
-> Requer: nova migração (novos estados + campos timestamp), `TransactionFlow` service, lógica de botões faseados
+- **IBAN de pagamento** na Sala de Transação é placeholder (`PT50 0000 …`) — substituir pelo IBAN real.
+- **Views Breeze órfãs**: `layouts/navigation.blade.php` e `layouts/guest.blade.php` não são usados (auth migrou para `x-auth-layout`); `guest` ainda referencia `@vite`.
+- **Perfil** (`profile/edit` + partials) ainda em estilo Breeze cinzento e parcialmente em inglês — alvo do refactor corporativo.
 
 ---
 
@@ -308,4 +319,6 @@ php artisan up
 | Sprint 2 | KYC 4 passos, KycBot, AuditLogger, OtpService |
 | Sprint 3A | Dashboard cliente, painel admin, taxas, chat básico |
 | Sprint 3B | Sala de transação, admin vivo com AJAX, audit trail UI |
-| **PRÓXIMO** | Refactor layout corporativo, TransactionFlow, testes, SEO |
+| Sprint K–N | Cancelar/auto-expiry, comprovativo imprimível, perfil admin, agente, painel financeiro, soft deletes, OTP telefone, ledger, `is_fully_verified`, Tailwind compilado |
+| Sprint N+ | `TransactionFlow` (máquina de estados), controllers admin divididos, `is_admin` nas rotas, 96 testes a passar |
+| **PRÓXIMO** | Refactor corporativo das views (perfil, admin rates/edit, limpeza Breeze), SEO |

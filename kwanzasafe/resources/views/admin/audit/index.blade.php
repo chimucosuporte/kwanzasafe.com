@@ -11,6 +11,20 @@
         .font-display { font-family: 'Syne', sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         [x-cloak] { display: none !important; }
+
+        /* ===== Alinhamento à paleta da marca KwanzaSafe ===== */
+        .bg-slate-900 { background-color:#000 !important; }
+        .bg-emerald-600 { background-color:#009d44 !important; }
+        .hover\:bg-emerald-700:hover { background-color:#007a34 !important; }
+        .bg-emerald-100 { background-color:#d1f2e0 !important; }
+        .bg-emerald-500\/20 { background-color:rgba(0,157,68,0.2) !important; }
+        .text-emerald-300 { color:#34d399 !important; }
+        .text-emerald-400 { color:#22c55e !important; }
+        .text-emerald-700 { color:#007a34 !important; }
+        .text-emerald-800 { color:#005a26 !important; }
+        .hover\:text-emerald-900:hover { color:#005a26 !important; }
+        .border-emerald-500 { border-color:#009d44 !important; }
+        .focus\:border-emerald-500:focus { border-color:#009d44 !important; }
     </style>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>

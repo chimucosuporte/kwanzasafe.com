@@ -49,6 +49,29 @@ it('blocks client from sending message on another user\'s transaction', function
 });
 
 // ---------------------------------------------------------------------------
+// Admin responde no chat da transação
+// ---------------------------------------------------------------------------
+
+it('admin can send a chat message on a transaction', function () {
+    $admin       = User::factory()->admin()->create();
+    $client      = User::factory()->create();
+    $transaction = Transaction::factory()->pending()->create(['user_id' => $client->id]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.chat.send', $transaction->id), [
+            'message_text' => 'Olá, recebemos a sua transação.',
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('chat_messages', [
+        'transaction_id' => $transaction->id,
+        'sender_id'      => $admin->id,
+        'message_text'   => 'Olá, recebemos a sua transação.',
+        'message_type'   => 'text',
+    ]);
+});
+
+// ---------------------------------------------------------------------------
 // Marcar mensagens como lidas
 // ---------------------------------------------------------------------------
 

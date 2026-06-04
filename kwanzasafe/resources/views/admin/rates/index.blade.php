@@ -1,70 +1,104 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-black text-2xl text-slate-800 uppercase tracking-tighter italic">
-                Gestão de Câmbio
-            </h2>
-            <img src="{{ asset('assets/images/logos/logo.png') }}" class="h-8 w-auto">
-        </div>
-    </x-slot>
 
-    <div class="py-12 px-6 max-w-7xl mx-auto animate-fade-in">
-        
-        @if(session('success'))
-            <div class="mb-8 p-6 bg-emerald-50 border-l-8 border-ks-emerald rounded-2xl shadow-sm text-ks-emerald font-black uppercase text-xs tracking-widest">
-                {{ session('success') }}
-            </div>
-        @endif
+@push('head')
+<title>Taxas de Câmbio — Admin KwanzaSafe</title>
+<style>
+body { background:#f5f5f5; }
+.rt-app { font-family:'DM Sans',sans-serif; min-height:100dvh; }
+.rt-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+.rt-back { color:#a3a3a3; text-decoration:none; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
+.rt-back:hover { color:white; }
+.rt-logo { height:28px; filter:brightness(0) invert(1); }
+.rt-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
+.rt-container { max-width:1100px; margin:0 auto; padding:1.5rem; }
 
-        <div class="bg-white shadow-2xl rounded-[3rem] overflow-hidden border border-slate-100">
-            <table class="w-full text-left">
-                <thead class="bg-slate-900 text-white text-[10px] uppercase font-black tracking-[0.2em]">
-                    <tr>
-                        <th class="p-8">Par de Moedas</th>
-                        <th class="p-8">Taxa Atual (1 Unid.)</th>
-                        <th class="p-8 text-center">Estado</th>
-                        <th class="p-8 text-right">Ações</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @foreach($rates as $r)
-                    <tr class="hover:bg-slate-50 transition duration-300">
-                        <td class="p-8">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400">
-                                    {{ substr($r->currency_from, 0, 1) }}
-                                </div>
-                                <span class="font-black text-slate-800 text-lg uppercase tracking-tighter">
-                                    {{ $r->currency_from }} &rarr; {{ $r->currency_to }}
-                                </span>
-                            </div>
-                        </td>
-                        <td class="p-8">
-                            <span class="font-black text-ks-emerald text-2xl tracking-tighter">
-                                {{ number_format($r->rate, 2, ',', '.') }} <small class="text-xs">KZ</small>
-                            </span>
-                        </td>
-                        <td class="p-8 text-center">
-                            @if($r->is_active)
-                                <span class="px-5 py-2 rounded-full bg-emerald-100 text-ks-emerald text-[10px] font-black uppercase tracking-widest">Operacional</span>
-                            @else
-                                <span class="px-5 py-2 rounded-full bg-red-100 text-red-600 text-[10px] font-black uppercase tracking-widest">Pausado</span>
-                            @endif
-                        </td>
-                        <td class="p-8 text-right">
-                            <a href="{{ route('admin.rates.edit', $r->id) }}" 
-                               class="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-ks-emerald transition shadow-lg shadow-slate-900/10">
-                                Editar Taxa
-                            </a>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+.rt-flash { background:#d1f2e0; border:1px solid #a7f3d0; color:#007a34; padding:0.875rem 1.125rem; border-radius:12px; font-size:0.85rem; font-weight:600; margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem; }
 
-        <div class="mt-12 text-center">
-            <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em]">KwanzaSafe Control Panel — Huambo 2026</p>
-        </div>
+.rt-head { margin-bottom:1.25rem; }
+.rt-head h1 { font-family:'Syne',sans-serif; font-weight:800; font-size:1.35rem; margin:0; }
+.rt-head p { font-size:0.8rem; color:#737373; margin:2px 0 0; }
+
+.rt-grid { display:grid; gap:0.875rem; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
+.rt-card { background:white; border:1px solid #e5e5e5; border-radius:16px; padding:1.25rem; box-shadow:0 1px 3px rgba(0,0,0,0.03); position:relative; overflow:hidden; }
+.rt-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:#009d44; }
+.rt-card.off::before { background:#d4d4d4; }
+.rt-card__pair { display:flex; align-items:center; gap:0.625rem; margin-bottom:0.875rem; }
+.rt-card__icon { width:40px; height:40px; border-radius:12px; background:#f0faf4; color:#009d44; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:800; flex-shrink:0; }
+.rt-card.off .rt-card__icon { background:#f5f5f5; color:#a3a3a3; }
+.rt-card__pair-name { font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; }
+.rt-card__pair-sub { font-size:0.65rem; color:#a3a3a3; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; }
+.rt-card__rate { font-family:'Syne',sans-serif; font-weight:800; font-size:1.75rem; letter-spacing:-0.02em; color:#000; }
+.rt-card__rate small { font-size:0.8rem; color:#737373; font-family:'JetBrains Mono',monospace; }
+.rt-card__foot { display:flex; align-items:center; justify-content:space-between; margin-top:1rem; }
+.rt-badge { font-size:0.6rem; font-weight:800; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.05em; }
+.rt-badge.on { background:#d1f2e0; color:#007a34; }
+.rt-badge.off { background:#fee2e2; color:#991b1b; }
+.rt-edit { background:#000; color:white; text-decoration:none; padding:0.5rem 1rem; border-radius:8px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; transition:background 0.15s; }
+.rt-edit:hover { background:#009d44; }
+.rt-empty { text-align:center; padding:4rem 1.5rem; color:#a3a3a3; background:white; border:1px solid #e5e5e5; border-radius:16px; }
+</style>
+@endpush
+
+<div class="rt-app">
+
+<header class="rt-topbar">
+    <a href="{{ route('admin.dashboard') }}" class="rt-back">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Painel
+    </a>
+    <div style="display:flex;align-items:center;gap:0.625rem;">
+        <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="rt-logo">
+        <span class="rt-title">Taxas de Câmbio</span>
     </div>
+    <div style="font-size:0.7rem;color:#a3a3a3;">{{ count($rates) }} pares</div>
+</header>
+
+<div class="rt-container">
+
+    @if(session('success'))
+        <div class="rt-flash">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {{ session('success') }}
+        </div>
+    @endif
+
+    <div class="rt-head">
+        <h1>Gestão de Câmbio</h1>
+        <p>Define a taxa em Kwanzas (AOA) por cada unidade de moeda e controla a disponibilidade na calculadora do cliente.</p>
+    </div>
+
+    @if(count($rates) === 0)
+        <div class="rt-empty">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">💱</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:800;">Sem taxas configuradas</div>
+        </div>
+    @else
+        <div class="rt-grid">
+            @foreach($rates as $r)
+                <div class="rt-card {{ $r->is_active ? '' : 'off' }}">
+                    <div class="rt-card__pair">
+                        <div class="rt-card__icon">{{ substr($r->currency_from, 0, 1) }}</div>
+                        <div>
+                            <div class="rt-card__pair-name">{{ $r->currency_from }} → {{ $r->currency_to }}</div>
+                            <div class="rt-card__pair-sub">Por 1 {{ $r->currency_from }}</div>
+                        </div>
+                    </div>
+                    <div class="rt-card__rate">{{ number_format($r->rate, 2, ',', '.') }} <small>KZ</small></div>
+                    <div class="rt-card__foot">
+                        @if($r->is_active)
+                            <span class="rt-badge on">Operacional</span>
+                        @else
+                            <span class="rt-badge off">Pausado</span>
+                        @endif
+                        <a href="{{ route('admin.rates.edit', $r->id) }}" class="rt-edit">Editar</a>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+</div>
+
+</div>
+
 </x-app-layout>

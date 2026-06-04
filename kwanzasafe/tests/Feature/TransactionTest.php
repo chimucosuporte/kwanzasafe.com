@@ -28,6 +28,27 @@ it('creates a transaction for a fully-verified client', function () {
     ]);
 });
 
+it('posts an automatic system message when a transaction is created', function () {
+    $rate = ExchangeRate::factory()->create(['currency_from' => 'EUR', 'rate' => 900, 'is_active' => true]);
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('transaction.store'), [
+            'moeda'        => $rate->id,
+            'valor_enviar' => 100,
+        ])
+        ->assertRedirect();
+
+    $transaction = Transaction::where('user_id', $user->id)->firstOrFail();
+
+    // A mensagem de boas-vindas é de sistema (sender_id null) na sala de transação
+    $this->assertDatabaseHas('chat_messages', [
+        'transaction_id' => $transaction->id,
+        'sender_id'      => null,
+        'message_type'   => 'text',
+    ]);
+});
+
 it('blocks transaction creation when KYC is incomplete', function () {
     $rate = ExchangeRate::factory()->create(['currency_from' => 'EUR', 'rate' => 900, 'is_active' => true]);
     $user = User::factory()->kycIncomplete()->create();
