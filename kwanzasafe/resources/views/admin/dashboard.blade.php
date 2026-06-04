@@ -732,9 +732,16 @@
             </div>
             <div class="ad-sidebar__user-info">
                 <div class="ad-sidebar__user-name">{{ Str::limit($user->full_name ?? 'Admin', 18) }}</div>
-                <div class="ad-sidebar__user-role">Administrador</div>
+                <div class="ad-sidebar__user-role">{{ auth()->user()->roleLabel() }}</div>
             </div>
         </div>
+
+        @php
+            $navStaffUnread = \App\Models\StaffMessage::where('recipient_id', auth()->id())->where('is_read', false)->count();
+            $navRecoursesPending = auth()->user()->isSuperAdmin()
+                ? \App\Models\Recourse::whereIn('status', ['open', 'in_review'])->count()
+                : 0;
+        @endphp
 
         <nav class="ad-sidebar__nav">
             <div class="ad-sidebar__label">Operações</div>
@@ -757,6 +764,11 @@
                 Mensagens
                 <span class="ad-nav__badge" x-show="stats.unread_chats > 0" x-text="stats.unread_chats" x-cloak></span>
             </a>
+            <a href="{{ route('admin.staff_chat.index') }}" class="ad-nav" @click="sidebarOpen = false">
+                <svg class="ad-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l3.586-3.586z"/></svg>
+                Canal de Staff
+                @if($navStaffUnread > 0)<span class="ad-nav__badge">{{ $navStaffUnread }}</span>@endif
+            </a>
 
             <div class="ad-sidebar__label">Gestão</div>
             <a href="{{ route('admin.users.index') }}" class="ad-nav" @click="sidebarOpen = false">
@@ -771,6 +783,19 @@
                 <svg class="ad-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 Audit Trail
             </a>
+
+            @if(auth()->user()->isSuperAdmin())
+            <div class="ad-sidebar__label">Super-Admin</div>
+            <a href="{{ route('admin.staff.index') }}" class="ad-nav" @click="sidebarOpen = false">
+                <svg class="ad-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                Funcionários
+            </a>
+            <a href="{{ route('admin.recourses.index') }}" class="ad-nav" @click="sidebarOpen = false">
+                <svg class="ad-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l9-4 9 4M4 10v8m16-8v8M4 18h16M9 10v8m6-8v8"/></svg>
+                Recursos
+                @if($navRecoursesPending > 0)<span class="ad-nav__badge warn">{{ $navRecoursesPending }}</span>@endif
+            </a>
+            @endif
 
             <div class="ad-sidebar__label">Conta</div>
             <a href="{{ route('dashboard') }}" class="ad-nav" @click="sidebarOpen = false">
