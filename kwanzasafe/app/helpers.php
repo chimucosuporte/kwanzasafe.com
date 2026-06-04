@@ -24,10 +24,10 @@ if (!function_exists('ks_file')) {
     {
         if (empty($path)) return null;
         $path = ltrim($path, '/');
-        if (str_starts_with($path, 'storage/')) {
-            return asset($path);
-        }
-        return asset('storage/' . $path);
+        // Compatibilidade com caminhos legados gravados com prefixo storage/
+        $path = preg_replace('#^storage/#', '', $path);
+        // Ficheiros sensíveis servidos por rota autenticada (FileController).
+        return url('file/' . $path);
     }
 }
 

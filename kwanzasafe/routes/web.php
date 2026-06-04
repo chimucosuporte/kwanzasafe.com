@@ -23,6 +23,7 @@ use App\Models\Transaction;
 use App\Models\ExchangeRate;
 use App\Models\ChatMessage;
 use App\Http\Controllers\OtpController;
+use App\Http\Controllers\FileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +64,9 @@ Route::get('/dashboard', function () {
 
 // AÇÕES CLIENTE
 Route::middleware('auth')->group(function () {
+    // Ficheiros privados (KYC, comprovativos, anexos) — servidos com autorização
+    Route::get('/file/{path}', [FileController::class, 'show'])->where('path', '.*')->name('file.show');
+
     Route::get('/profile',    [ProfileController::class, 'edit'])   ->name('profile.edit');
     Route::patch('/profile',  [ProfileController::class, 'update']) ->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -82,12 +86,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/transaction/{reference_id}/cancel',  [TransactionController::class, 'cancel'])        ->name('transaction.cancel');
     Route::get('/transaction/{reference_id}/receipt', [TransactionController::class, 'receipt'])       ->name('transaction.receipt');
 
-    Route::post('/transaction/{reference_id}/recourse',       [RecourseController::class, 'open']) ->name('recourse.open');
-    Route::post('/transaction/{reference_id}/recourse/reply', [RecourseController::class, 'reply'])->name('recourse.reply');
+    Route::post('/transaction/{reference_id}/recourse',       [RecourseController::class, 'open']) ->middleware('throttle:5,1') ->name('recourse.open');
+    Route::post('/transaction/{reference_id}/recourse/reply', [RecourseController::class, 'reply'])->middleware('throttle:20,1')->name('recourse.reply');
 
-    Route::post('/transaction/{reference_id}/chat', [ChatController::class, 'sendMessage'])->name('chat.send');
+    Route::post('/transaction/{reference_id}/chat', [ChatController::class, 'sendMessage'])->middleware('throttle:30,1')->name('chat.send');
     Route::post('/transaction/{reference_id}/read', [ChatController::class, 'markAsRead']) ->name('chat.read');
-    Route::get('/transaction/{reference_id}/poll',  [ChatController::class, 'poll'])       ->name('chat.poll');
+    Route::get('/transaction/{reference_id}/poll',  [ChatController::class, 'poll'])       ->middleware('throttle:90,1')->name('chat.poll');
 
     Route::post('/beneficiary',        [BeneficiaryController::class, 'store'])  ->name('beneficiary.store');
     Route::delete('/beneficiary/{id}', [BeneficiaryController::class, 'destroy'])->name('beneficiary.destroy');
@@ -114,8 +118,8 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
     Route::post('/transaction/{id}/cancel',           [TransactionAdminController::class, 'cancel'])           ->name('transaction.cancel');
     Route::get('/transaction/{id}/receipt',           [TransactionAdminController::class, 'receipt'])          ->name('transaction.receipt');
     Route::post('/transaction/{id}/assign',           [TransactionAdminController::class, 'assign'])           ->name('transaction.assign');
-    Route::post('/transaction/{id}/chat',             [TransactionAdminController::class, 'sendChatMessage'])  ->name('chat.send');
-    Route::get('/transaction/{id}/poll',              [TransactionAdminController::class, 'poll'])              ->name('transaction.poll');
+    Route::post('/transaction/{id}/chat',             [TransactionAdminController::class, 'sendChatMessage'])  ->middleware('throttle:60,1')->name('chat.send');
+    Route::get('/transaction/{id}/poll',              [TransactionAdminController::class, 'poll'])              ->middleware('throttle:90,1')->name('transaction.poll');
 
     // ===== Exclusivo do Super-Admin =====
     Route::middleware('is_super_admin')->group(function () {
@@ -149,8 +153,8 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
 
     // Canal de staff geral (suporte ↔ super-admin)
     Route::get('/staff-chat',                 [StaffChatController::class, 'index'])->name('staff_chat.index');
-    Route::post('/staff-chat/{userId}',       [StaffChatController::class, 'send']) ->name('staff_chat.send');
-    Route::get('/staff-chat/{userId}/poll',   [StaffChatController::class, 'poll']) ->name('staff_chat.poll');
+    Route::post('/staff-chat/{userId}',       [StaffChatController::class, 'send']) ->middleware('throttle:30,1')->name('staff_chat.send');
+    Route::get('/staff-chat/{userId}/poll',   [StaffChatController::class, 'poll']) ->middleware('throttle:90,1')->name('staff_chat.poll');
 
     // Taxas
     Route::get('/rates',           [RateAdminController::class, 'index']) ->name('rates.index');

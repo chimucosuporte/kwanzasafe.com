@@ -57,7 +57,7 @@ class ChatController extends Controller
                     return back()->withErrors(['attachment' => 'Tipo de ficheiro não permitido.']);
                 }
             }
-            $path = $file->store('chat_attachments', 'public');
+            $path = $file->store('chat_attachments', 'local');
             $data['file_path']    = $path;
 
             $ext = strtolower($file->getClientOriginalExtension());

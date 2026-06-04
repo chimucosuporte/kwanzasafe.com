@@ -197,7 +197,7 @@ class TransactionController extends Controller
             }
         }
 
-        $path = $file->store('receipts', 'public');
+        $path = $file->store('receipts', 'local');
 
         ChatMessage::create([
             'transaction_id' => $transaction->id,

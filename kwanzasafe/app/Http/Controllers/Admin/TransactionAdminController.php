@@ -307,7 +307,7 @@ class TransactionAdminController extends Controller
                     return back()->withErrors(['attachment' => 'Tipo de ficheiro não permitido.']);
                 }
             }
-            $data['file_path']    = $file->store('chat_attachments', 'public');
+            $data['file_path']    = $file->store('chat_attachments', 'local');
             $ext                  = strtolower($file->getClientOriginalExtension());
             $data['message_type'] = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'image' : 'document';
             if (!$request->filled('message_text')) {

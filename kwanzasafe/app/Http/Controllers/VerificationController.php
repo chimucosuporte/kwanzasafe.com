@@ -104,11 +104,11 @@ class VerificationController extends Controller
         $user = Auth::user();
 
         // Apagar ficheiro anterior se existir
-        if ($user->identity_document_path && Storage::disk('public')->exists($user->identity_document_path)) {
-            Storage::disk('public')->delete($user->identity_document_path);
+        if ($user->identity_document_path && Storage::disk('local')->exists($user->identity_document_path)) {
+            Storage::disk('local')->delete($user->identity_document_path);
         }
 
-        $path = $request->file('document')->store('kyc/documents', 'public');
+        $path = $request->file('document')->store('kyc/documents', 'local');
         $user->identity_document_path = $path;
         $user->save();
 
@@ -129,11 +129,11 @@ class VerificationController extends Controller
 
         $user = Auth::user();
 
-        if ($user->profile_photo_path && Storage::disk('public')->exists($user->profile_photo_path)) {
-            Storage::disk('public')->delete($user->profile_photo_path);
+        if ($user->profile_photo_path && Storage::disk('local')->exists($user->profile_photo_path)) {
+            Storage::disk('local')->delete($user->profile_photo_path);
         }
 
-        $path = $request->file('photo')->store('kyc/photos', 'public');
+        $path = $request->file('photo')->store('kyc/photos', 'local');
         $user->profile_photo_path = $path;
         $user->save();
 

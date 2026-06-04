@@ -96,7 +96,7 @@ class ChatMessage extends Model
      */
     public function getFileUrlAttribute(): ?string
     {
-        return $this->file_path ? asset('storage/' . $this->file_path) : null;
+        return $this->file_path ? ks_file($this->file_path) : null;
     }
 
     /**

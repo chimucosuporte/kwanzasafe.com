@@ -45,7 +45,7 @@
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 mb-6 flex items-center gap-5">
         <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center font-display font-black text-2xl text-emerald-800 overflow-hidden flex-shrink-0">
             @if($user->profile_photo_path)
-                <img src="{{ asset('storage/'.$user->profile_photo_path) }}" class="w-full h-full object-cover">
+                <img src="{{ ks_file($user->profile_photo_path) }}" class="w-full h-full object-cover">
             @else
                 {{ strtoupper(substr($user->full_name ?? $user->email, 0, 1)) }}
             @endif

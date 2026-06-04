@@ -313,7 +313,7 @@ class KycBot
         }
 
         try {
-            if (!Storage::disk('public')->exists($path)) {
+            if (!Storage::disk('local')->exists($path)) {
                 return [
                     'check'  => $check,
                     'label'  => $label,
@@ -324,7 +324,7 @@ class KycBot
                 ];
             }
 
-            $size = Storage::disk('public')->size($path);
+            $size = Storage::disk('local')->size($path);
 
             // Tamanho muito pequeno → suspeito (provavelmente imagem corrompida)
             if ($size < self::MIN_FILE_SIZE) {
