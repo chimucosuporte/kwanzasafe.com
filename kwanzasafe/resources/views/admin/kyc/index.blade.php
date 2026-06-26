@@ -5,10 +5,10 @@
 <style>
 body { background:#f5f5f5; }
 .kyci-app { font-family:'DM Sans',sans-serif; min-height:100dvh; }
-.kyci-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+.kyci-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .kyci-back { color:#a3a3a3; text-decoration:none; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
 .kyci-back:hover { color:white; }
-.kyci-logo { height:28px; filter:brightness(0) invert(1); }
+.kyci-logo { height:28px; }
 .kyci-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
 
 .kyci-container { max-width:1200px; margin:0 auto; padding:1.5rem; }
@@ -62,17 +62,7 @@ body { background:#f5f5f5; }
 
 <div class="kyci-app">
 
-<header class="kyci-topbar">
-    <a href="{{ route('admin.dashboard') }}" class="kyci-back">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Painel
-    </a>
-    <div style="display:flex;align-items:center;gap:0.625rem;">
-        <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="kyci-logo">
-        <span class="kyci-title">Verificação KYC</span>
-    </div>
-    <div style="font-size:0.7rem;color:#a3a3a3;">{{ $pendingUsers->count() }} pendentes</div>
-</header>
+<x-admin-topbar title="Verificação KYC" meta="{{ $pendingUsers->count() }} pendentes" />
 
 <div class="kyci-container">
 
@@ -128,7 +118,7 @@ body { background:#f5f5f5; }
                 <a href="{{ route('admin.kyc.show', $u->id) }}" class="kyci-row">
                     <div class="kyci-avatar">
                         @if(ks_file($u->profile_photo_path))
-                            <img src="{{ ks_file($u->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
+                            <img loading="lazy" decoding="async" src="{{ ks_file($u->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
                         @else
                             {{ strtoupper(substr($u->full_name ?? $u->email, 0, 1)) }}
                         @endif
@@ -158,7 +148,7 @@ body { background:#f5f5f5; }
             <a href="{{ route('admin.kyc.show', $u->id) }}" class="kyci-row">
                 <div class="kyci-avatar">
                     @if(ks_file($u->profile_photo_path))
-                        <img src="{{ ks_file($u->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
+                        <img loading="lazy" decoding="async" src="{{ ks_file($u->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
                     @else
                         {{ strtoupper(substr($u->full_name ?? $u->email, 0, 1)) }}
                     @endif

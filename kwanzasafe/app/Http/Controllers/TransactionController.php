@@ -8,6 +8,7 @@ use App\Models\ChatMessage;
 use App\Models\ExchangeRate;
 use App\Models\Transaction;
 use App\Services\AuditLogger;
+use App\Services\DestinationResolver;
 use App\Services\TicketAssignment;
 use App\Services\TransactionFlow;
 use Illuminate\Http\Request;
@@ -43,6 +44,9 @@ class TransactionController extends Controller
         $valorEnviar  = $request->valor_enviar;
         $valorReceber = round($valorEnviar * $taxa->rate, 2);
 
+        // Destino de recepção (snapshot) — o admin sabe para onde enviar.
+        $destino = DestinationResolver::resolve($user, $request->destino_tipo, (int) $request->destino_id);
+
         // Garantir unicidade do reference_id com até 5 tentativas
         $referenceId = null;
         for ($attempt = 0; $attempt < 5; $attempt++) {
@@ -66,6 +70,12 @@ class TransactionController extends Controller
             'rate_applied'     => $taxa->rate,
             'amount_received'  => $valorReceber,
             'status'           => 'pending',
+            'expires_at'       => now()->addHours(48),
+            'destination_type'       => $destino['type'],
+            'destination_label'      => $destino['label'],
+            'destination_identifier' => $destino['identifier'],
+            'destination_holder'     => $destino['holder'],
+            'destination_network'    => $destino['network'],
         ]);
 
         // Mensagem automática de boas-vindas na sala de transação

@@ -41,7 +41,11 @@ class FileController extends Controller
 
     private function clientOwns($user, string $path): bool
     {
-        if ($path !== '' && ($path === $user->identity_document_path || $path === $user->profile_photo_path)) {
+        if ($path !== '' && in_array($path, [
+            $user->identity_document_path,
+            $user->profile_photo_path,
+            $user->avatar_path,
+        ], true)) {
             return true;
         }
 

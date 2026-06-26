@@ -18,8 +18,7 @@
     <meta property="og:image" content="{{ asset('assets/images/logos/logo1.png') }}">
 
     {{-- ============ FAVICON ============ --}}
-    <link rel="icon" type="image/png" href="{{ asset('assets/images/logos/logo.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/images/logos/logo1.png') }}">
+    @include('partials.public-favicons')
 
     {{-- ============ PRECONNECT ============ --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">

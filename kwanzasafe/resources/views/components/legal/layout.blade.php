@@ -43,8 +43,7 @@
     <meta name="twitter:description" content="{{ $pageDescription }}">
 
     {{-- FAVICON --}}
-    <link rel="icon" type="image/png" href="{{ asset('assets/images/logos/logo.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/images/logos/logo1.png') }}">
+    @include('partials.public-favicons')
 
     {{-- FONTES --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -77,6 +76,8 @@
         .font-display { font-family: 'Syne', sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         [x-cloak] { display: none !important; }
+        a:focus-visible, button:focus-visible { outline: 3px solid var(--ks-green-dark); outline-offset: 2px; border-radius: 6px; }
+        @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
         /* ============ HEADER ============ */
         .lg-header { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--ks-gray-200); }
@@ -109,16 +110,32 @@
 
         @media(max-width: 768px) { .lg-hero { padding: 2rem 1rem 2rem; } .lg-hero-title { font-size: 1.75rem; } }
 
-        /* ============ CONTENT ============ */
-        .lg-content { max-width: 860px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
-        .lg-toc { background: var(--ks-gray-50); border: 1px solid var(--ks-gray-200); border-radius: 14px; padding: 1.5rem; margin-bottom: 2.5rem; }
-        .lg-toc-title { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ks-gray-500); margin: 0 0 0.875rem; }
-        .lg-toc ol { margin: 0; padding-left: 1.25rem; columns: 2; column-gap: 2rem; }
-        .lg-toc li { margin-bottom: 0.375rem; break-inside: avoid; }
-        .lg-toc a { color: var(--ks-gray-700); text-decoration: none; font-size: 0.875rem; font-weight: 500; }
-        .lg-toc a:hover { color: var(--ks-green); }
+        /* ============ CONTENT (TOC sticky + artigo) ============ */
+        .lg-content { max-width: 1080px; margin: 0 auto; padding: 2.75rem 1.5rem 4rem; }
+        .lg-layout { display: grid; grid-template-columns: 250px 1fr; gap: 3.5rem; align-items: start; }
+        .lg-toc-side { position: relative; }
+        .lg-toc-sticky { position: sticky; top: 88px; max-height: calc(100dvh - 110px); overflow-y: auto; padding-right: .5rem; }
+        .lg-toc-title { font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ks-gray-500); margin: 0 0 0.875rem; padding-left: .6rem; }
+        .lg-toc-side ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+        .lg-toc-side li { margin: 0; }
+        .lg-toc-side a { display: block; padding: .4rem .7rem; border-left: 2px solid var(--ks-gray-200); color: var(--ks-gray-500); text-decoration: none; font-size: 0.82rem; line-height: 1.35; transition: all .15s; }
+        .lg-toc-side a:hover { color: var(--ks-green-dark); border-left-color: var(--ks-green); }
+        .lg-toc-side a.active { color: var(--ks-green-dark); border-left-color: var(--ks-green); font-weight: 700; background: var(--ks-green-pale); }
+        .lg-article { min-width: 0; max-width: 70ch; }
 
-        @media(max-width: 768px) { .lg-toc ol { columns: 1; } .lg-content { padding: 2rem 1rem 3rem; } }
+        @media (max-width: 900px) {
+            .lg-content { padding: 2rem 1rem 3rem; }
+            .lg-layout { grid-template-columns: 1fr; gap: 1.75rem; }
+            .lg-toc-sticky { position: static; max-height: none; padding: 1.25rem; background: var(--ks-gray-50); border: 1px solid var(--ks-gray-200); border-radius: 14px; }
+            .lg-toc-side ol { columns: 2; column-gap: 1.5rem; }
+            .lg-toc-side a { border-left: none; padding: .3rem 0; break-inside: avoid; }
+            .lg-toc-side a.active { background: none; }
+            .lg-article { max-width: 100%; }
+        }
+
+        /* Voltar ao topo */
+        .lg-totop { position: fixed; bottom: 24px; left: 24px; width: 46px; height: 46px; border-radius: 50%; background: var(--ks-white); border: 1px solid var(--ks-gray-200); box-shadow: 0 6px 20px rgba(15,23,42,.12); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ks-green-dark); z-index: 90; transition: transform .15s, background .15s; }
+        .lg-totop:hover { transform: translateY(-2px); background: var(--ks-green-pale); }
 
         .lg-section { margin-bottom: 2.5rem; scroll-margin-top: 100px; }
         .lg-section h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--ks-black); margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--ks-green); display: inline-block; }
@@ -199,9 +216,20 @@
         </div>
     </section>
 
-    {{-- ============ CONTENT ============ --}}
+    {{-- ============ CONTENT (TOC sticky + artigo) ============ --}}
     <main class="lg-content">
-        {{ $slot }}
+        <div class="lg-layout">
+            @isset($toc)
+                <nav class="lg-toc-side" aria-label="Índice do documento">
+                    <div class="lg-toc-sticky">
+                        <p class="lg-toc-title">Índice</p>
+                        {{ $toc }}
+                    </div>
+                </nav>
+            @endisset
+
+            <article class="lg-article">
+                {{ $slot }}
 
         {{-- CONTACT BOX FINAL --}}
         <div class="lg-contact-box">
@@ -216,7 +244,16 @@
                 WhatsApp: +55 11 93357-9009
             </a>
         </div>
+            </article>
+        </div>
     </main>
+
+    {{-- Voltar ao topo --}}
+    <button class="lg-totop" type="button" aria-label="Voltar ao topo"
+            onclick="window.scrollTo({top:0,behavior:'smooth'})"
+            x-data="{ show: false }" @scroll.window="show = window.scrollY > 700" x-show="show" x-cloak>
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
 
     {{-- ============ FOOTER ============ --}}
     <footer class="lg-footer">
@@ -239,6 +276,26 @@
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
         </svg>
     </a>
+
+    {{-- Scroll-spy: destaca a secção ativa no índice --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const links = {};
+            document.querySelectorAll('.lg-toc-side a[href^="#"]').forEach(function (a) {
+                links[a.getAttribute('href').slice(1)] = a;
+            });
+            const sections = document.querySelectorAll('.lg-section[id]');
+            if (!sections.length || !('IntersectionObserver' in window)) return;
+            let current = null;
+            const spy = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) {
+                    if (e.isIntersecting) current = e.target.id;
+                });
+                Object.keys(links).forEach(function (id) { links[id].classList.toggle('active', id === current); });
+            }, { rootMargin: '-15% 0px -75% 0px', threshold: 0 });
+            sections.forEach(function (s) { spy.observe(s); });
+        });
+    </script>
 
 </body>
 </html>

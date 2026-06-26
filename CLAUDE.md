@@ -363,3 +363,122 @@ php artisan up
 
 ### Atribuição
 - Round-robin "menos ocupado" entre suporte activo na criação da transação (`assigned_admin`). Super-admin reatribui via `/admin/transaction/{id}/reassign`. Index admin com filtro `assigned` (mine/unassigned/all).
+
+---
+
+## 20. API Mobile (Sanctum) — para a app React Native/Expo
+
+> A app mobile (projeto Expo em `kwanzasafe-app/`, irmã de `kwanzasafe/`) **não consome Blade**: fala com uma API REST JSON. Esta camada é **100% aditiva** — nenhuma view/rota web existente é alterada. O site continua intacto.
+
+### Princípios da API
+- **Versionada** em `/api/v1/*` (prefixo). A rota legacy `GET /api/user` mantém-se.
+- **Autenticação por tokens Sanctum (Bearer)** — *personal access tokens*, não cookies/sessão. O guard `auth:sanctum` faz fallback para o bearer token; `EnsureFrontendRequestsAreStateful` fica **comentado** (correcto para app nativa). Sem CSRF nos endpoints de token.
+- **Novos ficheiros** em `app/Http/Controllers/Api/`, `app/Http/Requests/Api/`, `app/Http/Resources/`. Reutilizam Models, `AuditLogger` e validação do Breeze web (não duplicam lógica).
+- Respostas JSON: login/registo → `{ token, user }`; `/me` → `{ user }`. Validação falha → 422 (`Accept: application/json`).
+- `config/sanctum.php`: expiração configurável via `SANCTUM_TOKEN_EXPIRATION` (default `null` = não expira).
+
+### Endpoints (FASE 0 — auth)
+| Método | Rota | Auth | Controller | Notas |
+|---|---|---|---|---|
+| POST | `/api/v1/register` | — | `Api\AuthController@register` | `throttle:6,1`; dispara `Registered` (email de verificação); 201 `{token,user}` |
+| POST | `/api/v1/login` | — | `Api\AuthController@login` | `throttle:6,1` + rate-limit por email/IP (espelha `LoginRequest` web) |
+| POST | `/api/v1/logout` | `auth:sanctum` | `Api\AuthController@logout` | revoga **só** o token do pedido (`currentAccessToken()->delete()`) |
+| GET | `/api/v1/me` | `auth:sanctum` | `Api\AuthController@me` | devolve `UserResource` |
+
+- `UserResource` expõe papel/flags e estado KYC para gating na app; **nunca** password, token nem notas internas do bot.
+- Auditoria: `AuditLogger::auth('register'|'login'|'logout', …, metadata:{channel:'mobile'})`.
+- Testes: `tests/Feature/Api/AuthApiTest.php` (8 testes — registo, duplicado, login ok/falha, `/me` com/sem token, logout revoga, token revogado → 401).
+
+### Endpoints (FASE 1 — domínio) — todos sob `auth:sanctum`
+| Método | Rota | Controller | Notas |
+|---|---|---|---|
+| GET | `/api/v1/rates` | `Api\RateController@index` | taxas activas (calculadora); `rate` como string (precisão) |
+| GET | `/api/v1/transactions` | `Api\TransactionController@index` | só as do próprio utilizador, desc |
+| POST | `/api/v1/transactions` | `Api\TransactionController@store` | `throttle:5,1`; gating email/KYC → 403 (`code: email_unverified`/`kyc_incomplete`); cria `pending` + msg sistema + round-robin; 201 |
+| GET | `/api/v1/transactions/{ref}` | `Api\TransactionController@show` | detalhe + `payment_account` (conta de recepção activa) |
+| POST | `/api/v1/transactions/{ref}/receipt` | `…@uploadReceipt` | `throttle:20,1`; valida MIME real; → `awaiting_payment` |
+| POST | `/api/v1/transactions/{ref}/confirm` | `…@confirm` | só em `aoa_sent` → `completed` (+ledger) |
+| POST | `/api/v1/transactions/{ref}/cancel` | `…@cancel` | só em `pending`/`negotiating` |
+| GET | `/api/v1/transactions/{ref}/messages` | `Api\ChatController@index` | `throttle:90,1`; `?after=<id>` p/ polling; marca lidas; só canais `client`+`recourse` |
+| POST | `/api/v1/transactions/{ref}/messages` | `Api\ChatController@store` | `throttle:30,1`; texto e/ou anexo; 201 |
+| POST | `/api/v1/transactions/{ref}/read` | `Api\ChatController@markAsRead` | marca recebidas como lidas |
+| GET | `/api/v1/file/{path}` | `FileController@show` (reutilizado) | anexos/comprovativos privados, autorizados por token |
+
+- Toda a lógica de negócio reutiliza `TransactionFlow`, `TicketAssignment`, `AuditLogger`, `PaymentAccount::activeFor()` — **não duplica** o web.
+- Resources: `TransactionResource` (rótulo PT + flags `can_cancel`/`can_upload_receipt`/`can_confirm` + `payment_account`), `ChatMessageResource` (espelha o poll web; `file_url` aponta p/ `/api/v1/file/...`), `ExchangeRateResource`, `PaymentAccountResource`. Valores monetários como **string** (casts decimal) — nunca float.
+- Form Requests: `Api\{CreateTransaction,UploadReceipt,SendChatMessage}Request`.
+- Testes: `tests/Feature/Api/TransactionApiTest.php` (16 testes). **Suite total: 177 testes** a passar.
+- ✅ Resolve o ponto em aberto §16 (IBAN placeholder): a app usa a conta de recepção real via `payment_account`.
+
+### Servir localmente
+- `php artisan serve` **não funciona** a partir de `kwanzasafe/` (o `public/index.php`/symlink `public_html` usa caminhos do layout de produção). Usar `php -S 127.0.0.1:8000 router.local.php` a partir da raiz do repo (espelha `public_html/`). Verificação automatizada é via `php artisan test` (boota o framework directamente, sem passar pelo `index.php`).
+
+### App Expo (`kwanzasafe-app/`) — FASE 2 ✅
+Projecto **React Native + TypeScript + Expo SDK 54** (irmão de `kwanzasafe/`, no mesmo repo). SDK 54 (não o 55/56) porque a **Expo Go publicada na Play Store / App Store só suporta o SDK 54** (Junho 2026) — a Expo Go corre apenas **um** SDK de cada vez. Para SDK 55/56 num telemóvel físico já **não basta** a Expo Go da loja: é preciso `eas go` (build próprio) ou um development build. Por isso mantemos o SDK 54 enquanto testamos via Expo Go. Downgrade/upgrade: editar `expo` no `package.json` → `npx expo install --fix` (reescreve as versões) → `npm install --legacy-peer-deps`. No Windows, apagar `node_modules` pode falhar por *long paths* (xcframeworks do `expo-image`) — usar o truque `robocopy <pasta-vazia> node_modules /MIR` antes do `Remove-Item`.
+- Navegação: **Expo Router** (file-based, `src/app/`, layout `src/`); grupos `(auth)` e `(app)` com `AuthGate` (redirecção por sessão no `_layout` raiz).
+- Estado: **TanStack Query** (servidor) + **Zustand** (`src/stores/auth.ts`, sessão). HTTP: **axios** (`src/api/client.ts`) injecta o Bearer e trata 401. Token em **expo-secure-store** (nunca AsyncStorage).
+- Tema `src/theme/` (verde `#009d44`/preto/branco); fontes **Syne** + **DM Sans** via `@expo-google-fonts/*`. Base da API por `EXPO_PUBLIC_API_URL` (`src/config.ts`); ver `kwanzasafe-app/README.md` e `.env.example`.
+- Entregue: ecrã de **login** real contra `/api/v1/login` (token → secure-store) + home autenticada (`/me`) com logout. `node_modules` fora do git.
+- Verificação: `tsc --noEmit` limpo, `expo-doctor` 21/21, e `expo export` (Android) gera bundle Hermes válido (todo o grafo resolve). Nota: o `export`/Metro precisa de heap grande no Node 24 — usar `NODE_OPTIONS=--max-old-space-size=8192`.
+
+### App Expo — FASE 3 ✅ (calculadora + transações)
+Dashboard do cliente com **calculadora** (`GET /rates`), **criar transação** (`POST /transactions` → navega para o detalhe), **lista** (`GET /transactions`) e **detalhe** (`GET /transactions/{ref}`) com conta de pagamento e acções **confirmar**/**cancelar**.
+- Rotas Expo Router: `(app)/index.tsx` (dashboard+calculadora+recentes), `(app)/transactions/index.tsx` (lista, FlatList+pull-to-refresh), `(app)/transactions/[ref].tsx` (detalhe). Navegação dinâmica via objecto `{ pathname: '/transactions/[ref]', params: { ref } }` (typed routes).
+- Camada nova: `src/api/{rates,transactions}.ts` (desembrulha `{ data }` do Laravel Resource), `src/lib/format.ts` (dinheiro pt `1.234,56` + datas), componentes `Calculator`, `StatusBadge`, `TransactionRow`, `Header`. Tipos em `src/types/api.ts` (ExchangeRate/Transaction/PaymentAccount). Montantes sempre tratados como **string** vinda da API; conversão para número só para apresentação.
+- Gating: calculadora só permite criar se `user.is_fully_verified` (backend reforça com 403 `email_unverified`/`kyc_incomplete`).
+- ⚠️ **Typegen das rotas (`.expo/types/router.d.ts`)**: gerado de forma fiável pelo **`expo start`**, NÃO pelo `expo export` (o export por vezes produz tipos poluídos com `/../...` e `/transactions/index` — ignorar; é bug do export). Para validar tipos das rotas: arrancar `expo start` uma vez (gera o ficheiro) e só depois `tsc --noEmit`. O ficheiro está no `.gitignore`.
+- Verificação desta fase: `tsc --noEmit` limpo (com router.d.ts gerado) + `expo export` Android OK (1484 módulos, bundle Hermes válido).
+
+### App Expo — FASE 4 ✅ (sala de transação: chat + comprovativo)
+Conversa cliente↔agente com **polling** e envio de **anexos/comprovativo**.
+- Rotas reestruturadas: `(app)/transactions/[ref]/index.tsx` (detalhe + botões "Abrir conversa", "Enviar comprovativo") e `(app)/transactions/[ref]/chat.tsx` (sala). O antigo `[ref].tsx` foi convertido em pasta `[ref]/`.
+- `src/api/chat.ts`: `fetchMessages(ref, after)` (polling delta a 4s), `sendMessage` (texto e/ou anexo, multipart), `uploadReceipt` (multipart → `awaiting_payment`). `src/lib/picker.ts` usa **expo-document-picker** (imagens + PDF; funciona no Expo Go).
+- Chat: estado local + `setInterval` a 4s com cursor `after=<lastId>` (TanStack Query não encaixa bem no padrão delta); merge sem duplicados por id; auto-scroll. Bolhas mine/theirs/system. **Imagens inline carregadas com `expo-image` + header `Authorization: Bearer`** (o `file_url` aponta para `/api/v1/file/...` que exige token). Anexos: `FormData.append(field, { uri, name, type } as unknown as Blob)` + header `Content-Type: multipart/form-data`.
+- Tipos novos em `src/types/api.ts`: `ChatMessage`, `PickedFile`.
+- Verificação: `tsc` limpo (router.d.ts regenerado via `expo start`) + `expo export` Android OK (1501 módulos).
+- ⏳ Por fazer nesta área (refinamento): abrir anexos PDF (download autenticado + share), câmara directa (expo-image-picker), badge de não lidas.
+
+### App Expo — Onboarding ✅ (registo + recuperar password + verificação email)
+Fluxos de entrada completos na app.
+- **Backend (aditivo):** novas rotas `POST /api/v1/password/forgot` + `/password/reset` (públicas, OTP por email — não link), `POST /api/v1/email/verify/send` + `/email/verify` (auth). Controllers `Api\PasswordResetController` e `Api\EmailVerificationController`. `OtpService` ganhou `sendPasswordResetOtp`/`verifyPasswordResetOtp` (type `password_reset`; coluna `otp_codes.type` é string(20), sem enum). `forgot` devolve sempre resposta genérica (não revela emails); `reset` revoga todos os tokens após mudar password.
+- **Traduções PT criadas** (`kwanzasafe/lang/pt/{validation,auth,passwords}.php`): NÃO existiam — `APP_LOCALE=pt` sem pasta `lang/` fazia aparecer chaves cruas (`auth.failed`, `validation.required`) em TODA a app (web+API). Agora resolvido.
+- **App:** ecrãs `(auth)/register.tsx`, `(auth)/forgot-password.tsx`, `(auth)/reset-password.tsx` (recebe `email` por param), `(app)/verify-email.tsx` (envia código ao abrir + reenviar). Login com links "Criar conta"/"Esqueci-me da palavra-passe". Dashboard mostra banner tocável de confirmação de email quando `!email_verified`. API em `src/api/auth.ts` (`registerAccount`/`forgotPassword`/`resetPassword`/`sendEmailOtp`/`verifyEmailOtp`).
+- Verificação: backend testado via tinker (send/verify/reset OK, Auth::validate OK) + curl (forgot 200 genérico, 401 sem token, 422 PT); app `tsc` limpo + `expo export` Android OK.
+
+### App Expo — Perfil + Beneficiários ✅
+- **Backend (aditivo):** `Api\ProfileController` (`PATCH /api/v1/profile` nome/email — muda email reinicia verificação; `PUT /api/v1/profile/password` exige atual, revoga outros tokens; `DELETE /api/v1/profile` forceDelete com password). `Api\BeneficiaryController` (`GET/POST/DELETE /api/v1/beneficiaries`) com **anti-fraude** (holder_name vs full_name do KYC → 422) + duplicado 422. `BeneficiaryResource`. **Reutiliza os Form Requests web** `ProfileUpdateRequest` e `StoreBeneficiaryRequest` (não duplica). Verificação da password atual é manual via `Hash::check` (guard sanctum é stateless; rule `current_password` não funciona aqui).
+- **App:** ecrãs `(app)/profile.tsx` (dados, alterar password, link beneficiários, logout, eliminar conta) e `(app)/beneficiaries.tsx` (lista + adicionar com titular pré-preenchido do KYC + remover). Dashboard: header "Sair" → "Conta" (→ /profile, onde está o logout). `src/api/profile.ts` + `src/api/beneficiaries.ts`, tipo `Beneficiary`.
+- Verificação: backend via curl autenticado (lista vazia, anti-fraude 422, criação 201 c/ IBAN normalizado, duplicado 422, delete 200, validação perfil PT) + app tsc limpo + expo export Android OK.
+
+### App Expo — Onboarding intro (boas-vindas) ✅
+Carrossel de primeira utilização (distinto dos ecrãs de auth).
+- `(auth)/onboarding.tsx`: 3 slides (ScrollView horizontal `pagingEnabled` + dots, sem dependências), CTAs "Criar conta"/"Já tenho conta", botão "Saltar", e links **Termos/Privacidade** que abrem as páginas web via `expo-web-browser` (URL = `API_BASE_URL` + `/termos` `/privacidade`, servidas pelo Laravel web).
+- Flag persistente `ks_onboarding_seen` em `secureStore.ts` (`getOnboardingSeen`/`setOnboardingSeen`). Store de auth ganhou `onboardingSeen` + `completeOnboarding()`; `bootstrap` lê token+flag em paralelo.
+- **AuthGate** (`_layout.tsx`) actualizado: guest sem onboarding visto → `/onboarding`; guest com flag → `/login`; authed em grupo auth → `/`. Os CTAs chamam `completeOnboarding()` antes de navegar (evita loop do gate).
+- Verificação: tsc limpo + expo export Android OK.
+
+### App Expo — EAS dev build preparado ✅ (falta só o build com login Expo)
+Infra de development build pronta para destrancar o KYC com câmara.
+- Instalados `expo-dev-client` (runtime do dev build) e `expo-image-picker` (câmara + galeria p/ KYC).
+- `eas.json` criado: perfis `development` (developmentClient + APK + distribution internal + channel development), `preview` (APK) e `production` (app-bundle, autoIncrement). `cli.appVersionSource=local`.
+- `app.json`: adicionado `android.package` e `ios.bundleIdentifier` = **`com.kwanzasafe.app`** (obrigatório para EAS); plugin `expo-image-picker` com permissões PT (câmara/fotos).
+- Verificado: `expo-doctor` 18/18, `expo install --check` OK, `tsc` limpo, `expo export` Android OK.
+- **Falta (só o utilizador pode):** `npx eas-cli@latest login` (conta Expo grátis) → `eas build --profile development --platform android` (corre na cloud da Expo, ~10-20min, cria `extra.eas.projectId` no 1.º run; gera APK). Instalar APK no emulador via `adb install` ou no telemóvel; depois `npx expo start --dev-client` (já NÃO Expo Go). Build local (`--local`) desaconselhado neste PC (RAM/disco; precisa JDK17+SDK).
+
+### App Expo — KYC 4 passos ✅ (escrito; câmara via dev build)
+- **Backend (aditivo):** `Api\VerificationController` espelha o web — `POST /api/v1/kyc/personal` (dados pessoais → data_verified), `/kyc/phone/send` + `/kyc/phone/verify` (OTP telefone via OtpService), `/kyc/document`, `/kyc/photo` (multipart → disco privado). Cada passo corre `KycBot::analyzeAndApply` e devolve `{ message, kyc:{score,status}, user }`. Validação espelha o web (BI único, idade ≥18, BI futuro). Rótulos PT acrescentados a `lang/pt/validation.php` (full_name, bi_number, etc.).
+- **App:** `(app)/kyc.tsx` — wizard de 4 passos (indicador de progresso): dados pessoais (datas como texto AAAA-MM-DD, género M/F), telefone (enviar/reenviar/confirmar OTP), documento (câmara ou ficheiro PDF/imagem via `pickAttachment`), selfie (câmara ou galeria). Ecrã final mostra score/status do bot (aprovado/revisão/rejeitado→recomeçar). `src/api/kyc.ts` + `src/lib/imagePicker.ts` (expo-image-picker: `capturePhoto`/`pickPhoto`, pede permissões). Banner KYC do dashboard agora abre `/kyc`.
+- ⚠️ A **câmara** corre no **dev build** (expo-image-picker pode também funcionar no Expo Go, mas o caminho suportado é o dev build).
+- Verificação: backend via curl (validação PT, personal→score 60 pending_review, phone OTP) + app tsc limpo + expo export Android OK.
+
+### EAS dev build — CONCLUÍDO ✅ (2026-06-19)
+Primeiro APK de development gerado na cloud (conta `edsonchimuco`, projectId `801f2c1f-...`).
+- **2 falhas até acertar:** (1) `eas build` pediu `expo-updates` por causa de `channel` no perfil → instalou e mandou re-correr; (2) build errou em ~88s (UNKNOWN_ERROR, fase "Build complete hook") — relacionado com a config do EAS Update/channel. **Resolução: removido `"channel"` do perfil `development` no `eas.json`** → build passou (~14 min, FINISHED).
+- Também adicionado `kwanzasafe-app/.npmrc` com `legacy-peer-deps=true` (rede de segurança p/ instalação na cloud, dado o downgrade SDK54 ter exigido legacy peers) e permissões Android limpas (só `CAMERA`).
+- **Nota monorepo:** o `eas build` corre dentro de `kwanzasafe-app/` mas o git root é o repo Laravel pai → faz upload de ~81MB (working tree); funciona à mesma. Considerar `.easignore` no futuro p/ reduzir.
+- APK instala-se no emulador via `adb install` e corre-se com `npx expo start --dev-client`. Comandos `eas` precisam do login Expo (já feito); builds correm na cloud (quota do plano grátis).
+
+### Próximas fases mobile
+- ~~FASE 0–4~~ ✅ · ~~Onboarding (registo+password+OTP)~~ ✅ · ~~Perfil + beneficiários~~ ✅ · ~~Onboarding intro~~ ✅ · ~~EAS dev build (infra)~~ ✅ · ~~KYC 4 passos~~ ✅ (falta só correr no dev build)
+- **PRÓXIMO:** correr o EAS dev build (login Expo) e testar KYC com câmara; páginas legais nativas; histórico/recursos. Objectivo: **app cliente com todas as views da web** (quase completo).
+- **FASES 5–6:** KYC com câmara (EAS dev build), push + biometria.

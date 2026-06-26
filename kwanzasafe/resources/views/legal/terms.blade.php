@@ -14,8 +14,7 @@
     :lastUpdated="$lastUpdated">
 
     {{-- ÍNDICE --}}
-    <div class="lg-toc">
-        <p class="lg-toc-title">Índice</p>
+    <x-slot:toc>
         <ol>
             <li><a href="#s1">Definições e Âmbito</a></li>
             <li><a href="#s2">Elegibilidade</a></li>
@@ -35,7 +34,7 @@
             <li><a href="#s16">Legislação Aplicável</a></li>
             <li><a href="#s17">Contacto</a></li>
         </ol>
-    </div>
+    </x-slot:toc>
 
     <div class="lg-highlight">
         <p><strong>Importante:</strong> Ao criar uma conta e utilizar a plataforma KwanzaSafe, declaras ter lido, compreendido e aceite integralmente estes Termos de Uso. Se não concordas com alguma cláusula, por favor não utilizes os nossos serviços.</p>

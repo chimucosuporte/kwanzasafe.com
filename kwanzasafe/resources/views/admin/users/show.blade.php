@@ -8,7 +8,7 @@ body { background:#f5f5f5; }
 .ud-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
 .ud-back { color:#a3a3a3; text-decoration:none; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
 .ud-back:hover { color:white; }
-.ud-logo { height:28px; filter:brightness(0) invert(1); }
+.ud-logo { height:28px; }
 .ud-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
 
 .ud-container { max-width:1100px; margin:0 auto; padding:1.5rem; }
@@ -81,7 +81,7 @@ body { background:#f5f5f5; }
         Utilizadores
     </a>
     <div style="display:flex;align-items:center;gap:0.625rem;">
-        <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="ud-logo">
+        <img src="{{ asset('assets/images/logos/logo-icone.png') }}" alt="KwanzaSafe" class="ud-logo">
         <span class="ud-title">Perfil do Utilizador</span>
     </div>
     <div></div>
@@ -123,8 +123,8 @@ body { background:#f5f5f5; }
             <div class="ud-card">
                 <div class="ud-profile">
                     <div class="ud-avatar">
-                        @if(ks_file($user->profile_photo_path))
-                            <img src="{{ ks_file($user->profile_photo_path) }}" alt="foto">
+                        @if(ks_file($user->display_photo_path))
+                            <img loading="lazy" decoding="async" src="{{ ks_file($user->display_photo_path) }}" alt="foto">
                         @else
                             {{ strtoupper(substr($user->full_name ?? $user->email, 0, 1)) }}
                         @endif

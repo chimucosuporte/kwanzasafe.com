@@ -21,12 +21,23 @@ class Recourse extends Model
         'assigned_super_admin',
         'reason',
         'status',
+        'expires_at',
         'resolution',
         'resolved_at',
     ];
 
     protected $casts = [
         'resolved_at' => 'datetime',
+        'expires_at'  => 'datetime',
+    ];
+
+    /** Rótulos legíveis (PT) por estado. */
+    public const STATUS_LABELS = [
+        'open'      => 'Em aberto',
+        'in_review' => 'Em análise',
+        'resolved'  => 'Resolvido',
+        'rejected'  => 'Recusado',
+        'cancelled' => 'Cancelado',
     ];
 
     public function transaction()

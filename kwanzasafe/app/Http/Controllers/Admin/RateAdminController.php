@@ -30,6 +30,8 @@ class RateAdminController extends Controller
         $rate->is_active = $request->is_active;
         $rate->save();
 
+        ExchangeRate::forgetActiveCache(); // taxas mudam → invalida o cache de imediato
+
         AuditLogger::admin('rate_updated',
             "Taxa {$rate->currency_from}/AOA alterada de {$oldRate} para {$rate->rate}",
             $rate,

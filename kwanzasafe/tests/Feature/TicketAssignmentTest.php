@@ -63,8 +63,16 @@ it('auto-assigns a newly created transaction to a support agent', function () {
     $agent = User::factory()->support()->create();
     $client = User::factory()->create();
 
+    $dest = \App\Models\Beneficiary::create([
+        'user_id' => $client->id, 'bank_name' => 'BAI',
+        'iban' => 'AO06004400006729503010102', 'holder_name' => $client->full_name ?: 'Titular',
+    ]);
+
     $this->actingAs($client)
-        ->post(route('transaction.store'), ['moeda' => $rate->id, 'valor_enviar' => 100])
+        ->post(route('transaction.store'), [
+            'moeda' => $rate->id, 'valor_enviar' => 100,
+            'destino_tipo' => 'bank', 'destino_id' => $dest->id,
+        ])
         ->assertRedirect();
 
     $tx = Transaction::where('user_id', $client->id)->firstOrFail();

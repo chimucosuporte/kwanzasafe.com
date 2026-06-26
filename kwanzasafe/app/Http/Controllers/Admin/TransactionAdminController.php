@@ -8,6 +8,7 @@ use App\Models\ChatMessage;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\PushService;
 use App\Services\TransactionFlow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,13 +25,29 @@ class TransactionAdminController extends Controller
         // Suporte vê os seus tíquetes por defeito; super-admin vê todos.
         $assigned = $request->query('assigned', $user->isSupport() ? 'mine' : 'all');
 
-        $query = Transaction::with('user', 'admin')
+        $transactions = $this->filteredQuery($request, $user)
             ->withCount(['chatMessages as unread_count' => fn($q) =>
                 $q->where('is_read', false)
                   ->whereNotNull('sender_id')
                   ->whereColumn('sender_id', 'transactions.user_id')
             ])
-            ->orderBy('created_at', 'desc');
+            ->paginate(20)->withQueryString();
+
+        return view('admin.transactions.index', compact('transactions', 'status', 'period', 'search', 'assigned'));
+    }
+
+    /**
+     * Query de transações filtrada (status, período, pesquisa, atribuição).
+     * Partilhada pelo index e pelo export CSV para garantir o mesmo conjunto.
+     */
+    private function filteredQuery(Request $request, $user)
+    {
+        $status   = $request->query('status', 'pending');
+        $period   = $request->query('period', 'all');
+        $search   = $request->query('q', '');
+        $assigned = $request->query('assigned', $user->isSupport() ? 'mine' : 'all');
+
+        $query = Transaction::with('user', 'admin')->orderBy('created_at', 'desc');
 
         if ($assigned === 'mine') {
             $query->where('assigned_admin', $user->id);
@@ -62,9 +79,50 @@ class TransactionAdminController extends Controller
             });
         }
 
-        $transactions = $query->paginate(20)->withQueryString();
+        return $query;
+    }
 
-        return view('admin.transactions.index', compact('transactions', 'status', 'period', 'search', 'assigned'));
+    /**
+     * Exporta as transações filtradas para CSV (UTF-8 com BOM para o Excel).
+     */
+    public function export(Request $request)
+    {
+        $user = Auth::user();
+
+        AuditLogger::admin('transactions.export', 'Exportou transações para CSV', null,
+            $request->only('status', 'period', 'q', 'assigned'));
+
+        $filename = 'transacoes_kwanzasafe_' . now()->format('Y-m-d_His') . '.csv';
+
+        return response()->streamDownload(function () use ($request, $user) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM UTF-8
+
+            fputcsv($out, [
+                'Referência', 'Data', 'Cliente', 'Email', 'Moeda',
+                'Valor enviado', 'Taxa aplicada', 'Recebe (AOA)', 'Comissão', 'Estado', 'Agente',
+            ]);
+
+            $this->filteredQuery($request, $user)->reorder('id')->chunkById(300, function ($rows) use ($out) {
+                foreach ($rows as $t) {
+                    fputcsv($out, [
+                        $t->reference_id,
+                        optional($t->created_at)->format('Y-m-d H:i'),
+                        $t->user->full_name ?? '—',
+                        $t->user->email ?? '—',
+                        $t->currency_from,
+                        $t->amount_sent,
+                        $t->rate_applied,
+                        $t->amount_received,
+                        $t->fee_amount,
+                        $t->status,
+                        $t->admin->full_name ?? '—',
+                    ]);
+                }
+            });
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function show($id)
@@ -185,6 +243,17 @@ class TransactionAdminController extends Controller
         if ($result['alreadyDone']) {
             return redirect()->route('admin.transaction.show', $result['txId'])
                 ->with('error', 'Transação #' . $result['ref'] . ' já tinha sido aprovada.');
+        }
+
+        // Notifica o cliente (push) da conclusão.
+        $tx = Transaction::with('user')->find($result['txId']);
+        if ($tx && $tx->user) {
+            PushService::sendToUser(
+                $tx->user,
+                'Transação ' . $tx->reference_id,
+                '🎉 Transação concluída com sucesso! Obrigado por usar a KwanzaSafe.',
+                ['reference_id' => $tx->reference_id, 'status' => 'completed'],
+            );
         }
 
         return redirect()->route('admin.transaction.show', $result['txId'])

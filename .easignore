@@ -1,0 +1,29 @@
+# Reduz drasticamente o upload do EAS Build.
+# O git root é o repo Laravel pai, por isso o EAS empacotava TUDO. Aqui
+# excluímos tudo o que NÃO pertence à app Expo (kwanzasafe-app/).
+
+# Backend Laravel e public web (não são necessários para o build da app)
+/kwanzasafe/
+/public_html/
+
+# Segredos e auxiliares
+/chave/
+router.local.php
+router.php
+
+# Documentação / ferramentas
+/_DOCS/
+/.claude/
+
+# Artefactos grandes
+*.zip
+*.apk
+*.aab
+*.keystore
+
+# Dentro da app Expo: dependências e caches (o EAS reinstala)
+kwanzasafe-app/node_modules/
+kwanzasafe-app/.expo/
+kwanzasafe-app/dist/
+kwanzasafe-app/android/
+kwanzasafe-app/ios/

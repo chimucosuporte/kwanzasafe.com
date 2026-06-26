@@ -173,7 +173,7 @@ body { background:#f8fafc; }
         Transações
     </a>
     <div style="display:flex;align-items:center;gap:0.625rem;">
-        <img src="{{ asset('assets/images/logos/logo1.png') }}" class="atx-topbar__logo" alt="KwanzaSafe" onerror="this.style.display='none'">
+        <img src="{{ asset('assets/images/logos/logo-icone.png') }}" class="atx-topbar__logo" alt="KwanzaSafe" onerror="this.style.display='none'">
         <span class="atx-topbar__title">Operação</span>
     </div>
     <span class="atx-topbar__ref">#{{ $transaction->reference_id }}</span>
@@ -291,7 +291,7 @@ body { background:#f8fafc; }
                 </div>
                 @if($client)
                 <div class="atx-client">
-                    @php $avUrl = ks_file($client->profile_photo_path); @endphp
+                    @php $avUrl = ks_file($client->display_photo_path); @endphp
                     <div class="atx-client__avatar">
                         @if($avUrl)
                             <img src="{{ $avUrl }}" style="width:100%;height:100%;object-fit:cover;">
@@ -339,6 +339,21 @@ body { background:#f8fafc; }
                         <span class="atx-datarow__label">A Pagar (AOA)</span>
                         <span class="atx-datarow__value"><strong>{{ number_format($transaction->amount_received, 2, ',', '.') }} Kz</strong></span>
                     </div>
+                    @if($transaction->destination_identifier)
+                    <div class="atx-datarow" style="align-items:flex-start;background:rgba(0,157,68,0.08);border:1px solid rgba(0,157,68,0.25);border-radius:10px;padding:10px 12px;margin:6px 0;">
+                        <span class="atx-datarow__label">📤 Enviar Kwanzas para</span>
+                        <span class="atx-datarow__value" style="text-align:right;line-height:1.5;">
+                            <strong>{{ $transaction->destination_label }}</strong><br>
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;">{{ $transaction->destination_identifier }}</span><br>
+                            <small>Titular: {{ $transaction->destination_holder }}@if($transaction->destination_network) · Rede: {{ $transaction->destination_network }}@endif</small>
+                        </span>
+                    </div>
+                    @else
+                    <div class="atx-datarow">
+                        <span class="atx-datarow__label">📤 Enviar para</span>
+                        <span class="atx-datarow__value" style="color:#b45309;">Sem destino indicado (transação antiga)</span>
+                    </div>
+                    @endif
                     <div class="atx-datarow">
                         <span class="atx-datarow__label">Criada</span>
                         <span class="atx-datarow__value">{{ $transaction->created_at->format('d/m/Y H:i') }}</span>
@@ -508,8 +523,8 @@ body { background:#f8fafc; }
             <div class="atx-chat-wrap" x-data="adminChat()">
                 <div class="atx-chat-header">
                     <div class="atx-chat-header__avatar">
-                        @if($client && ks_file($client->profile_photo_path))
-                            <img src="{{ ks_file($client->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
+                        @if($client && ks_file($client->display_photo_path))
+                            <img loading="lazy" decoding="async" src="{{ ks_file($client->display_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
                         @else
                             {{ $client ? strtoupper(substr($client->full_name ?? $client->email, 0, 1)) : '?' }}
                         @endif

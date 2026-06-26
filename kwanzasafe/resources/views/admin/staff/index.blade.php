@@ -8,7 +8,7 @@ body { background:#f5f5f5; }
 .sf-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .sf-back { color:#a3a3a3; text-decoration:none; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
 .sf-back:hover { color:white; }
-.sf-logo { height:28px; filter:brightness(0) invert(1); }
+.sf-logo { height:28px; }
 .sf-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
 .sf-container { max-width:1000px; margin:0 auto; padding:1.5rem; }
 
@@ -66,17 +66,7 @@ body { background:#f5f5f5; }
 
 <div class="sf-app" x-data="{ showForm: {{ $errors->any() ? 'true' : 'false' }} }">
 
-<header class="sf-topbar">
-    <a href="{{ route('admin.dashboard') }}" class="sf-back">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Painel
-    </a>
-    <div style="display:flex;align-items:center;gap:0.625rem;">
-        <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="sf-logo">
-        <span class="sf-title">Funcionários de Suporte</span>
-    </div>
-    <div style="font-size:0.7rem;color:#a3a3a3;">{{ count($staff) }} agente(s)</div>
-</header>
+<x-admin-topbar title="Funcionários de Suporte" meta="{{ count($staff) }} agente(s)" />
 
 <div class="sf-container">
 

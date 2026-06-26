@@ -179,8 +179,8 @@
         {{-- HERO --}}
         <div class="pf-hero">
             <div class="pf-hero__avatar">
-                @if(ks_file($user->profile_photo_path))
-                    <img src="{{ ks_file($user->profile_photo_path) }}" alt="">
+                @if(ks_file($user->display_photo_path))
+                    <img loading="lazy" decoding="async" src="{{ ks_file($user->display_photo_path) }}" alt="">
                 @else
                     {{ strtoupper(substr($firstName, 0, 1)) }}
                 @endif

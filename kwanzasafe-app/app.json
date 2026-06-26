@@ -1,0 +1,81 @@
+{
+  "expo": {
+    "name": "KwanzaSafe",
+    "slug": "kwanzasafe-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "kwanzasafeapp",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.kwanzasafe.app",
+      "icon": "./assets/images/icon.png"
+    },
+    "android": {
+      "package": "com.kwanzasafe.app",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "versionCode": 2
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0a0d0b",
+          "android": {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 140
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#00b454"
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "A KwanzaSafe precisa de acesso às tuas fotos para enviares documentos de verificação (KYC).",
+          "cameraPermission": "A KwanzaSafe precisa da câmara para fotografares os teus documentos e a tua face na verificação (KYC)."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "A KwanzaSafe usa o reconhecimento facial para desbloquear a app em segurança."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "801f2c1f-1b28-438d-9494-b16a66a71ef6"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/801f2c1f-1b28-438d-9494-b16a66a71ef6"
+    }
+  }
+}

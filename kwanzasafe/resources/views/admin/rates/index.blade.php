@@ -8,7 +8,7 @@ body { background:#f5f5f5; }
 .rt-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .rt-back { color:#a3a3a3; text-decoration:none; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
 .rt-back:hover { color:white; }
-.rt-logo { height:28px; filter:brightness(0) invert(1); }
+.rt-logo { height:28px; }
 .rt-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
 .rt-container { max-width:1100px; margin:0 auto; padding:1.5rem; }
 
@@ -41,17 +41,7 @@ body { background:#f5f5f5; }
 
 <div class="rt-app">
 
-<header class="rt-topbar">
-    <a href="{{ route('admin.dashboard') }}" class="rt-back">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Painel
-    </a>
-    <div style="display:flex;align-items:center;gap:0.625rem;">
-        <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="rt-logo">
-        <span class="rt-title">Taxas de Câmbio</span>
-    </div>
-    <div style="font-size:0.7rem;color:#a3a3a3;">{{ count($rates) }} pares</div>
-</header>
+<x-admin-topbar title="Taxas de Câmbio" meta="{{ count($rates) }} pares" />
 
 <div class="rt-container">
 

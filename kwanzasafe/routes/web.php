@@ -33,7 +33,7 @@ use App\Http\Controllers\FileController;
 
 // PÚBLICAS
 Route::get('/', function () {
-    $rates = ExchangeRate::where('is_active', true)->get();
+    $rates = ExchangeRate::activeCached();
     return view('welcome', compact('rates'));
 })->name('home');
 Route::get('/termos',      fn() => view('legal.terms'))  ->name('terms');
@@ -49,17 +49,18 @@ Route::get('/sitemap.xml', function () {
 // DASHBOARD CLIENTE
 Route::get('/dashboard', function () {
     $user  = Auth::user();
-    $rates = ExchangeRate::where('is_active', true)->get();
+    $rates = ExchangeRate::activeCached();
     $transactions = Transaction::where('user_id', $user->id)
                         ->orderBy('created_at', 'desc')->get();
     $beneficiaries = $user->beneficiaries()->orderBy('created_at', 'desc')->get();
+    $wallets = \App\Models\PaymentWallet::where('user_id', $user->id)->orderByDesc('is_default')->orderBy('created_at')->get();
 
     $unreadMessages = ChatMessage::whereHas('transaction', fn($q) => $q->where('user_id', $user->id))
                         ->where('sender_id', '!=', $user->id)
                         ->where('is_read', false)
                         ->count();
 
-    return view('dashboard', compact('rates', 'transactions', 'beneficiaries', 'unreadMessages'));
+    return view('dashboard', compact('rates', 'transactions', 'beneficiaries', 'wallets', 'unreadMessages'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // AÇÕES CLIENTE
@@ -72,16 +73,16 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::post('/verify/data',     [VerificationController::class, 'updatePersonalData'])->name('verify.data');
-    Route::post('/verify/phone',        [VerificationController::class, 'updatePhone'])  ->name('verify.phone');
-    Route::post('/verify/phone/submit', [VerificationController::class, 'verifyPhone'])   ->name('verify.phone.submit');
-    Route::post('/verify/document', [VerificationController::class, 'uploadDocument'])    ->name('verify.document');
-    Route::post('/verify/photo',    [VerificationController::class, 'uploadPhoto'])       ->name('verify.photo');
+    Route::post('/verify/phone',        [VerificationController::class, 'updatePhone'])  ->middleware('throttle:6,1') ->name('verify.phone');
+    Route::post('/verify/phone/submit', [VerificationController::class, 'verifyPhone'])   ->middleware('throttle:8,1') ->name('verify.phone.submit');
+    Route::post('/verify/document', [VerificationController::class, 'uploadDocument'])    ->middleware('throttle:20,1') ->name('verify.document');
+    Route::post('/verify/photo',    [VerificationController::class, 'uploadPhoto'])       ->middleware('throttle:20,1') ->name('verify.photo');
 
     Route::post('/transaction', [TransactionController::class, 'store'])
         ->middleware('throttle:5,1')
         ->name('transaction.store');
     Route::get('/transaction/{reference_id}',         [TransactionController::class, 'show'])         ->name('transaction.show');
-    Route::post('/transaction/{reference_id}/upload',  [TransactionController::class, 'uploadReceipt']) ->name('transaction.upload');
+    Route::post('/transaction/{reference_id}/upload',  [TransactionController::class, 'uploadReceipt']) ->middleware('throttle:20,1') ->name('transaction.upload');
     Route::post('/transaction/{reference_id}/confirm', [TransactionController::class, 'confirmReceipt'])->name('transaction.confirm');
     Route::post('/transaction/{reference_id}/cancel',  [TransactionController::class, 'cancel'])        ->name('transaction.cancel');
     Route::get('/transaction/{reference_id}/receipt', [TransactionController::class, 'receipt'])       ->name('transaction.receipt');
@@ -97,8 +98,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/beneficiary/{id}', [BeneficiaryController::class, 'destroy'])->name('beneficiary.destroy');
 
     Route::get('/verify/email',         [OtpController::class, 'showEmailVerification'])->name('otp.email.verify');
-    Route::post('/verify/email/send',   [OtpController::class, 'sendEmailOtp'])         ->name('otp.email.send');
-    Route::post('/verify/email/submit', [OtpController::class, 'verifyEmailOtp'])       ->name('otp.email.verify.submit');
+    Route::post('/verify/email/send',   [OtpController::class, 'sendEmailOtp'])         ->middleware('throttle:5,1') ->name('otp.email.send');
+    Route::post('/verify/email/submit', [OtpController::class, 'verifyEmailOtp'])       ->middleware('throttle:8,1') ->name('otp.email.verify.submit');
 });
 
 // ============ ADMIN ============
@@ -110,6 +111,7 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
 
     // Transações
     Route::get('/transactions',              [TransactionAdminController::class, 'index'])          ->name('transactions.index');
+    Route::get('/transactions/export',       [TransactionAdminController::class, 'export'])->middleware('throttle:10,1')->name('transactions.export');
     Route::get('/transaction/{id}',                   [TransactionAdminController::class, 'show'])              ->name('transaction.show');
     Route::post('/transaction/{id}/request-payment',  [TransactionAdminController::class, 'requestPayment'])   ->name('transaction.request_payment');
     Route::post('/transaction/{id}/payment-received', [TransactionAdminController::class, 'markPaymentReceived'])->name('transaction.payment_received');

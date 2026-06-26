@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "13989010350",
+    "project_id": "kwanzasafe",
+    "storage_bucket": "kwanzasafe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:13989010350:android:b0678aed774d0f0158863f",
+        "android_client_info": {
+          "package_name": "com.kwanzasafe.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAq_qpkvyml-zbdUUrpHRWKpQZs2u0pjKc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

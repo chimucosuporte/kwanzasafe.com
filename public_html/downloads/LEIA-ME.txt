@@ -1,0 +1,8 @@
+Coloca aqui o APK de produção com o nome EXATO: kwanzasafe.apk
+
+  public_html/downloads/kwanzasafe.apk
+
+Assim que este ficheiro existir, o botão "Baixar APK" aparece
+automaticamente no dashboard do utilizador (continua na app).
+
+Para gerar o APK: ver _DOCS/PUBLICAR-APP.md (perfil "preview" do EAS).

@@ -16,7 +16,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ $pageTitle ?? 'KwanzaSafe' }} — KwanzaSafe</title>
@@ -25,8 +25,7 @@
     <meta name="theme-color" content="#009d44">
 
     {{-- FAVICON --}}
-    <link rel="icon" type="image/png" href="{{ asset('assets/images/logos/logo.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/images/logos/logo1.png') }}">
+    @include('partials.public-favicons')
 
     {{-- FONTES --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -65,67 +64,42 @@
             min-height: 100dvh;
             -webkit-font-smoothing: antialiased;
         }
-
-        /* ============ LAYOUT ============ */
-        .auth-page {
-            min-height: 100dvh;
-            display: flex;
-            flex-direction: column;
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 3px solid var(--ks-green-dark); outline-offset: 2px; border-radius: 6px;
         }
 
-        /* ============ HEADER ============ */
-        .auth-header {
-            padding: 1rem 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid var(--ks-gray-200);
-        }
-        .auth-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-        }
-        .auth-logo img { height: 32px; width: auto; }
-        .auth-logo-mobile { display: none; }
-        .auth-logo-tablet { display: none; }
-        .auth-logo-desktop { display: block; }
-        @media(max-width: 640px) {
-            .auth-logo-mobile { display: block; }
-            .auth-logo-tablet, .auth-logo-desktop { display: none; }
-        }
-        @media(min-width: 641px) and (max-width: 1024px) {
-            .auth-logo-tablet { display: block; }
-            .auth-logo-mobile, .auth-logo-desktop { display: none; }
-        }
+        /* ============ LAYOUT (2 colunas) ============ */
+        .auth-shell { min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 1fr; }
 
-        .auth-back {
-            color: var(--ks-gray-700);
-            text-decoration: none;
-            font-size: 0.8rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-            transition: all 0.15s;
-        }
-        .auth-back:hover {
-            background: var(--ks-gray-100);
-            color: var(--ks-black);
-        }
+        /* Painel de marca (esquerda) */
+        .auth-brand { position: relative; background: linear-gradient(150deg, #00692e 0%, var(--ks-green) 55%, var(--ks-green-dark) 100%); color: #fff; padding: 3rem; display: flex; flex-direction: column; overflow: hidden; }
+        .auth-brand::before { content: ''; position: absolute; bottom: -130px; right: -130px; width: 440px; height: 440px; background: rgba(255,255,255,.08); border-radius: 50%; }
+        .auth-brand::after { content: ''; position: absolute; top: -90px; left: -90px; width: 280px; height: 280px; border: 2px solid rgba(255,255,255,.1); border-radius: 50%; }
+        .auth-brand__logo { display: inline-flex; align-items: center; position: relative; z-index: 1; }
+        .auth-brand__logo img { height: 38px; width: auto; }
+        .auth-brand__mid { margin: auto 0; position: relative; z-index: 1; max-width: 30rem; }
+        .auth-brand__title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(1.6rem, 2.4vw, 2.1rem); line-height: 1.18; letter-spacing: -0.02em; margin: 0; }
+        .auth-brand__sub { margin: 1rem 0 0; font-size: 1rem; opacity: .92; line-height: 1.6; }
+        .auth-quote { margin-top: 2.5rem; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 18px; padding: 1.5rem; }
+        .auth-quote p { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 1.02rem; line-height: 1.5; margin: 0; }
+        .auth-quote__who { display: flex; align-items: center; gap: .7rem; margin-top: 1.1rem; }
+        .auth-quote__av { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,.22); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: .9rem; flex-shrink: 0; }
+        .auth-brand__trust { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 2.5rem; position: relative; z-index: 1; }
+        .auth-brand__trust span { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; font-weight: 600; opacity: .92; }
 
-        /* ============ MAIN ============ */
-        .auth-main {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem 1rem 2.5rem;
+        /* Conteúdo (direita) */
+        .auth-content { display: flex; flex-direction: column; min-height: 100dvh; background: linear-gradient(180deg, var(--ks-green-pale) 0%, #fafafa 35%); }
+        .auth-topbar { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; }
+        .auth-topbar__logo { display: none; align-items: center; text-decoration: none; }
+        .auth-topbar__logo img { height: 30px; width: auto; }
+        .auth-back { color: var(--ks-gray-700); text-decoration: none; font-size: .8rem; font-weight: 600; display: inline-flex; align-items: center; gap: .375rem; padding: .5rem .75rem; border-radius: 8px; transition: all .15s; margin-left: auto; }
+        .auth-back:hover { background: rgba(0,0,0,.05); color: var(--ks-black); }
+        .auth-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem 2.5rem; }
+
+        @media (max-width: 900px) {
+            .auth-shell { grid-template-columns: 1fr; }
+            .auth-brand { display: none; }
+            .auth-topbar__logo { display: inline-flex; }
         }
 
         .auth-card {
@@ -212,7 +186,7 @@
             -webkit-appearance: none;
         }
         .auth-input:focus {
-            border-color: var(--ks-green);
+            border-color: var(--ks-green-dark);
             background: var(--ks-white);
             box-shadow: 0 0 0 4px rgba(0,157,68,0.1);
         }
@@ -236,7 +210,7 @@
             align-items: center;
             justify-content: center;
         }
-        .auth-toggle-pwd:hover { color: var(--ks-green); }
+        .auth-toggle-pwd:hover { color: var(--ks-green-dark); }
 
         .auth-error {
             font-size: 0.75rem;
@@ -340,7 +314,7 @@
             transition: color 0.15s;
         }
         .auth-link:hover {
-            color: var(--ks-green);
+            color: var(--ks-green-dark);
             text-decoration: underline;
         }
 
@@ -356,7 +330,7 @@
             text-decoration: none;
             font-weight: 600;
         }
-        .auth-footer a:hover { color: var(--ks-green); }
+        .auth-footer a:hover { color: var(--ks-green-dark); }
         .auth-footer-sep { margin: 0 0.5rem; opacity: 0.5; }
 
         /* ============ WHATSAPP FLUTUANTE ============ */
@@ -404,36 +378,60 @@
 </head>
 <body>
 
-<div class="auth-page">
+<div class="auth-shell">
 
-    {{-- HEADER --}}
-    <header class="auth-header">
-        <a href="{{ url('/') }}" class="auth-logo" aria-label="KwanzaSafe — Início">
-            <img src="{{ asset('assets/images/logos/logo.png') }}" alt="KwanzaSafe" class="auth-logo-mobile">
-            <img src="{{ asset('assets/images/logos/logo2.png') }}" alt="KwanzaSafe" class="auth-logo-tablet">
-            <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="auth-logo-desktop">
+    {{-- PAINEL DE MARCA (esquerda) --}}
+    <aside class="auth-brand">
+        <a href="{{ url('/') }}" class="auth-brand__logo" aria-label="KwanzaSafe — início">
+            <img src="{{ asset('assets/images/logos/logo-isotipo-white.png') }}" alt="KwanzaSafe">
         </a>
-        <a href="{{ url('/') }}" class="auth-back">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>Voltar ao site</span>
-        </a>
-    </header>
+        <div class="auth-brand__mid">
+            <h2 class="auth-brand__title">A forma mais segura de enviar dinheiro para Angola.</h2>
+            <p class="auth-brand__sub">Euros, Reais e USDC convertidos em Kwanzas — em horas, não dias. Com verificação séria e suporte humano de verdade.</p>
+            <figure class="auth-quote">
+                <blockquote><p>“Mandei euros de Lisboa para a minha mãe no Huambo e em menos de duas horas ela já tinha os kwanzas.”</p></blockquote>
+                <figcaption class="auth-quote__who">
+                    <span class="auth-quote__av">ET</span>
+                    <span>
+                        <span style="display:block;font-weight:700;font-size:.9rem;">Edmilson Tavares</span>
+                        <span style="display:block;font-size:.78rem;opacity:.82;">Lisboa · envia para o Huambo</span>
+                    </span>
+                </figcaption>
+            </figure>
+        </div>
+        <div class="auth-brand__trust">
+            <span>✓ Verificação KYC</span>
+            <span>✓ Anti-fraude AML</span>
+            <span>✓ BNA Compliant</span>
+        </div>
+    </aside>
 
-    {{-- CONTEÚDO --}}
-    <main class="auth-main">
-        {{ $slot }}
-    </main>
+    {{-- CONTEÚDO (direita) --}}
+    <div class="auth-content">
+        <div class="auth-topbar">
+            <a href="{{ url('/') }}" class="auth-topbar__logo" aria-label="KwanzaSafe — início">
+                <img src="{{ asset('assets/images/logos/logo-isotipo.png') }}" alt="KwanzaSafe">
+            </a>
+            <a href="{{ url('/') }}" class="auth-back">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Voltar ao site</span>
+            </a>
+        </div>
 
-    {{-- FOOTER --}}
-    <footer class="auth-footer">
-        © {{ date('Y') }} KwanzaSafe
-        <span class="auth-footer-sep">·</span>
-        <a href="{{ route('terms') }}">Termos</a>
-        <span class="auth-footer-sep">·</span>
-        <a href="{{ route('privacy') }}">Privacidade</a>
-    </footer>
+        <main class="auth-main">
+            {{ $slot }}
+        </main>
+
+        <footer class="auth-footer">
+            © {{ date('Y') }} KwanzaSafe
+            <span class="auth-footer-sep">·</span>
+            <a href="{{ route('terms') }}">Termos</a>
+            <span class="auth-footer-sep">·</span>
+            <a href="{{ route('privacy') }}">Privacidade</a>
+        </footer>
+    </div>
 
 </div>
 

@@ -5,10 +5,10 @@
 <style>
 body { background:#f5f5f5; }
 .usr-app { font-family:'DM Sans',sans-serif; min-height:100dvh; }
-.usr-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+.usr-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .usr-back { color:#a3a3a3; text-decoration:none; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
 .usr-back:hover { color:white; }
-.usr-logo { height:28px; filter:brightness(0) invert(1); }
+.usr-logo { height:28px; }
 .usr-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
 
 .usr-container { max-width:1400px; margin:0 auto; padding:1.5rem; }
@@ -68,17 +68,7 @@ body { background:#f5f5f5; }
 
 <div class="usr-app">
 
-<header class="usr-topbar">
-    <a href="{{ route('admin.dashboard') }}" class="usr-back">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Painel
-    </a>
-    <div style="display:flex;align-items:center;gap:0.625rem;">
-        <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="usr-logo">
-        <span class="usr-title">Utilizadores</span>
-    </div>
-    <div style="font-size:0.7rem;color:#a3a3a3;">{{ $users->total() }} utilizadores</div>
-</header>
+<x-admin-topbar title="Utilizadores" meta="{{ $users->total() }} utilizadores" />
 
 <div class="usr-container">
     <form method="GET" class="usr-filters">
@@ -124,8 +114,8 @@ body { background:#f5f5f5; }
                             <td>
                                 <div class="usr-cell">
                                     <div class="usr-avatar">
-                                        @if(ks_file($u->profile_photo_path))
-                                            <img src="{{ ks_file($u->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
+                                        @if(ks_file($u->display_photo_path))
+                                            <img loading="lazy" decoding="async" src="{{ ks_file($u->display_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
                                         @else
                                             {{ strtoupper(substr($u->full_name ?? $u->email, 0, 1)) }}
                                         @endif

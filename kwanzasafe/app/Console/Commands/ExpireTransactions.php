@@ -9,12 +9,19 @@ use Illuminate\Console\Command;
 class ExpireTransactions extends Command
 {
     protected $signature   = 'transactions:expire';
-    protected $description = 'Expira transações pendentes após 48 horas de inactividade';
+    protected $description = 'Expira transações pendentes após o prazo (expires_at) ou 48h de inactividade';
 
     public function handle(): int
     {
         $stale = Transaction::whereIn('status', ['pending', 'negotiating', 'awaiting_payment'])
-            ->where('updated_at', '<', now()->subHours(48))
+            ->where(function ($q) {
+                // Prazo explícito ultrapassado...
+                $q->whereNotNull('expires_at')->where('expires_at', '<', now())
+                  // ...ou (transações antigas sem prazo) 48h de inactividade.
+                  ->orWhere(function ($q2) {
+                      $q2->whereNull('expires_at')->where('updated_at', '<', now()->subHours(48));
+                  });
+            })
             ->get();
 
         $count = 0;

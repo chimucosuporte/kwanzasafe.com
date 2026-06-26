@@ -8,7 +8,7 @@ body { background:#f5f5f5; }
 .re-topbar { background:#000; color:white; padding:0.875rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .re-back { color:#a3a3a3; text-decoration:none; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
 .re-back:hover { color:white; }
-.re-logo { height:28px; filter:brightness(0) invert(1); }
+.re-logo { height:28px; }
 .re-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
 .re-main { max-width:460px; margin:0 auto; padding:2rem 1.5rem; }
 .re-card { background:white; border:1px solid #e5e5e5; border-radius:20px; padding:1.75rem; box-shadow:0 4px 24px rgba(0,0,0,0.06); }
@@ -40,7 +40,7 @@ body { background:#f5f5f5; }
         Taxas
     </a>
     <div style="display:flex;align-items:center;gap:0.625rem;">
-        <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="re-logo">
+        <img src="{{ asset('assets/images/logos/logo-icone.png') }}" alt="KwanzaSafe" class="re-logo">
         <span class="re-title">Editar Taxa</span>
     </div>
     <div style="width:48px;"></div>

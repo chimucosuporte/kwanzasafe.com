@@ -14,8 +14,7 @@
     :lastUpdated="$lastUpdated">
 
     {{-- ÍNDICE --}}
-    <div class="lg-toc">
-        <p class="lg-toc-title">Índice</p>
+    <x-slot:toc>
         <ol>
             <li><a href="#p1">Introdução</a></li>
             <li><a href="#p2">Responsável pelo Tratamento</a></li>
@@ -32,7 +31,7 @@
             <li><a href="#p13">Alterações à Política</a></li>
             <li><a href="#p14">Contacto</a></li>
         </ol>
-    </div>
+    </x-slot:toc>
 
     <div class="lg-highlight">
         <p><strong>Resumo:</strong> A KwanzaSafe recolhe apenas os dados necessários para cumprir obrigações legais (KYC, AML) e prestar-te o serviço. Não vendemos dados pessoais. Tens sempre o direito de aceder, corrigir ou pedir a eliminação dos teus dados.</p>

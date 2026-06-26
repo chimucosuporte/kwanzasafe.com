@@ -1,0 +1,22 @@
+
+# Firebase / FCM — a chave de serviço é SEGREDO (nunca commitar nem subir no build)
+/chave/
+*-adminsdk-*.json
+# NOTA: google-services.json NÃO é ignorado — é config de cliente e precisa de ir no build EAS.
+
+# Segredos de ambiente (nunca versionar)
+.env.prod-staging
+.env.save*
+
+# Artefactos e arquivos (regeneráveis / pesados)
+*.zip
+*.tar.gz
+/_DOCS/deploy/
+
+# Ferramentas locais
+/.claude/
+/router.local.php
+
+# Binários de build da app (pesados — usar EAS/anexos)
+*.apk
+*.aab

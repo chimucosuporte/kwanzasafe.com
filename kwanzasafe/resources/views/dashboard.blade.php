@@ -43,6 +43,17 @@
         $currencyMeta[$r->currency_from] ?? ['symbol' => '$', 'flag' => '💱', 'color' => '#009d44']
     ))->values();
 
+    // Destinos de recepção (beneficiários + carteiras) para a calculadora
+    $walletLabels = ['bybit' => 'Bybit', 'binance' => 'Binance', 'redotpay' => 'RedotPay'];
+    $destinationsForJs = collect();
+    foreach (($beneficiaries ?? []) as $b) {
+        $destinationsForJs->push(['type' => 'bank', 'id' => $b->id, 'title' => $b->bank_name, 'subtitle' => $b->iban, 'icon' => 'bank']);
+    }
+    foreach (($wallets ?? []) as $w) {
+        $destinationsForJs->push(['type' => $w->provider, 'id' => $w->id, 'title' => $walletLabels[$w->provider] ?? ucfirst($w->provider), 'subtitle' => $w->identifier, 'icon' => 'wallet']);
+    }
+    $destinationsForJs = $destinationsForJs->values();
+
     // TX para JS (dashboard.blade só)
     $txForJs = $transactions->map(fn($tx) => [
         'reference_id'    => $tx->reference_id,
@@ -89,7 +100,7 @@
     }
     .dc-topbar__menu:hover { background:#f5f5f5; }
 
-    .dc-topbar__brand { display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; }
+    .dc-topbar__brand { display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; text-decoration:none; }
     .dc-topbar__logo { height:30px; width:auto; }
 
     .dc-topbar__avatar {
@@ -121,16 +132,21 @@
     }
     .dc-sidebar.is-open { transform:translateX(0); }
 
-    .dc-sidebar__logo {
-        padding:1.25rem 1.25rem 1rem;
+    .dc-sidebar__head {
+        padding:1.35rem 1.25rem 1.1rem;
         border-bottom:1px solid rgba(255,255,255,0.08);
-        display:flex; align-items:center; gap:0.625rem;
     }
-    .dc-sidebar__logo img { height:32px; filter:brightness(0) invert(1); }
-    .dc-sidebar__brand { font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; }
+    .dc-sidebar__logo { display:inline-flex; align-items:center; text-decoration:none; }
+    .dc-logo { width:auto; display:none; }
+    .dc-logo--full { height:42px; display:block; }
+    .dc-logo--icon { height:36px; }
+    @media (max-width:640px) {
+        .dc-logo--full { display:none; }
+        .dc-logo--icon { display:block; }
+    }
     .dc-sidebar__sub {
-        font-size:0.55rem; font-weight:700; letter-spacing:0.15em;
-        text-transform:uppercase; color:#009d44; margin-top:-2px;
+        font-size:0.55rem; font-weight:700; letter-spacing:0.16em;
+        text-transform:uppercase; color:rgba(255,255,255,0.42); margin-top:0.6rem;
     }
 
     .dc-sidebar__user {
@@ -644,12 +660,12 @@
                 <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
             </svg>
         </button>
-        <div class="dc-topbar__brand">
-            <img src="{{ asset('assets/images/logos/logo.png') }}" alt="KwanzaSafe" class="dc-topbar__logo">
-        </div>
+        <a href="{{ url('/') }}" class="dc-topbar__brand" aria-label="KwanzaSafe — início">
+            <img src="{{ asset('assets/images/logos/logo-isotipo.png') }}" alt="KwanzaSafe" class="dc-topbar__logo">
+        </a>
         <button class="dc-topbar__avatar" @click="setTab('profile')" aria-label="Perfil">
-            @if(ks_file($user->profile_photo_path))
-                <img src="{{ ks_file($user->profile_photo_path) }}" alt="">
+            @if(ks_file($user->display_photo_path))
+                <img loading="lazy" decoding="async" src="{{ ks_file($user->display_photo_path) }}" alt="">
             @else
                 {{ strtoupper(substr($firstName, 0, 1)) }}
             @endif
@@ -661,18 +677,18 @@
 
     {{-- ============ SIDEBAR (desktop fixa, mobile hamburger) ============ --}}
     <aside class="dc-sidebar" :class="{'is-open': sidebarOpen}">
-        <div class="dc-sidebar__logo">
-            <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe">
-            <div>
-                <div class="dc-sidebar__brand">KwanzaSafe</div>
-                <div class="dc-sidebar__sub">Cliente</div>
-            </div>
+        <div class="dc-sidebar__head">
+            <a href="{{ url('/') }}" class="dc-sidebar__logo" aria-label="KwanzaSafe — início">
+                <img src="{{ asset('assets/images/logos/logo-icone.png') }}" alt="KwanzaSafe" class="dc-logo dc-logo--icon">
+                <img src="{{ asset('assets/images/logos/logo-isotipo-white.png') }}" alt="KwanzaSafe" class="dc-logo dc-logo--full">
+            </a>
+            <div class="dc-sidebar__sub">Painel do Cliente</div>
         </div>
 
         <div class="dc-sidebar__user">
             <div class="dc-sidebar__avatar">
-                @if(ks_file($user->profile_photo_path))
-                    <img src="{{ ks_file($user->profile_photo_path) }}" alt="">
+                @if(ks_file($user->display_photo_path))
+                    <img loading="lazy" decoding="async" src="{{ ks_file($user->display_photo_path) }}" alt="">
                 @else
                     {{ strtoupper(substr($firstName, 0, 1)) }}
                 @endif
@@ -764,6 +780,33 @@
                 </div>
             </div>
 
+            {{-- ============ CONTINUAR NA APP (Android) ============ --}}
+            @php $hasApk = file_exists(base_path('../public_html/downloads/kwanzasafe.apk')); @endphp
+            <div style="background:linear-gradient(135deg,#0a0d0b 0%,#0d3a20 100%);border-radius:18px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-40px;right:-30px;width:160px;height:160px;background:rgba(0,180,84,.12);border-radius:50%;"></div>
+                <div style="width:52px;height:52px;border-radius:14px;background:rgba(0,180,84,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;">
+                    <svg width="26" height="26" fill="none" stroke="#1be37a" stroke-width="2" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><line x1="11" y1="18" x2="13" y2="18" stroke-linecap="round"/></svg>
+                </div>
+                <div style="flex:1;min-width:200px;color:#fff;position:relative;">
+                    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;">Continua no telemóvel</div>
+                    <div style="font-size:.85rem;color:#a7c4b5;margin-top:.2rem;">Leva o KwanzaSafe contigo — câmbio, chat, KYC e notificações na app Android.</div>
+                </div>
+                <div style="display:flex;gap:.6rem;flex-wrap:wrap;position:relative;">
+                    <a href="https://play.google.com/store/apps/details?id=com.kwanzasafe.app" target="_blank" rel="noopener"
+                       style="display:inline-flex;align-items:center;gap:.5rem;background:#fff;color:#0a0d0b;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;padding:.7rem 1.1rem;border-radius:999px;text-decoration:none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.6 2.3 13 11.7l-9.4 9.4A1.7 1.7 0 0 1 3 19.9V4.1c0-.7.3-1.3.6-1.8Zm11 11 2.6 2.6-9.7 5.5 7.1-8.1Zm0-3.6L7.5 2.6l9.7 5.5-2.6 2.6ZM18.9 9.6l2.7 1.5c1 .6 1 1.9 0 2.5l-2.7 1.5L16 12l2.9-2.4Z"/></svg>
+                        Google Play
+                    </a>
+                    @if($hasApk)
+                        <a href="{{ asset('downloads/kwanzasafe.apk') }}" download
+                           style="display:inline-flex;align-items:center;gap:.45rem;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.22);font-weight:600;font-size:.82rem;padding:.7rem 1rem;border-radius:999px;text-decoration:none;">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Baixar APK
+                        </a>
+                    @endif
+                </div>
+            </div>
+
             {{-- KYC BANNER --}}
             @if(!auth()->user()->email_verified_at)
                 <a href="{{ route('otp.email.verify') }}" class="dc-kyc-banner warn">
@@ -800,107 +843,174 @@
             @endif
             
                             {{-- ============ CALCULADORA DE CÂMBIO ============ --}}
+                @push('head')
+                <style>
+                    .dc-calc input[type=number]::-webkit-outer-spin-button,
+                    .dc-calc input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+                    .dc-calc input[type=number] { -moz-appearance:textfield; appearance:textfield; }
+                    .dc-fxcard { background:#fff; border:1px solid #e9ebee; border-radius:18px; padding:1.15rem; box-shadow:0 2px 12px rgba(15,23,42,0.05); }
+                    .dc-fx { display:flex; flex-direction:column; gap:0.7rem; }
+                    .dc-fxblock { background:#f6f7f9; border:1.5px solid #ebedf0; border-radius:14px; padding:0.85rem 1rem; transition:border-color .15s, background .15s; }
+                    .dc-fxblock:focus-within { border-color:#009d44; background:#fff; }
+                    .dc-fxblock--recv { background:linear-gradient(135deg,#f1faf4,#e6f7ec); border-color:#bce6cd; }
+                    .dc-fxlabel { font-family:'DM Sans',sans-serif; font-size:0.62rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#8a9099; margin-bottom:0.55rem; }
+                    .dc-fxblock--recv .dc-fxlabel { color:#018a3b; }
+                    .dc-fxrow { display:flex; align-items:center; gap:0.75rem; }
+                    .dc-amount { flex:1; min-width:0; border:none; background:transparent; outline:none; text-align:right; font-family:'Syne',sans-serif; font-weight:800; font-size:1.7rem; color:#0f172a; letter-spacing:-0.02em; padding:0; }
+                    .dc-amount::placeholder { color:#cfd3d8; }
+                    .dc-recv { flex:1; min-width:0; text-align:right; font-family:'Syne',sans-serif; font-weight:800; font-size:1.7rem; letter-spacing:-0.02em; line-height:1.1; overflow:hidden; }
+                    .dc-recv.zero { color:#9aa4ae; }
+                    .dc-recv.has { color:#0f172a; }
+                    .dc-cc { display:inline-flex; align-items:center; gap:7px; background:#fff; border:1.5px solid #e5e7eb; border-radius:999px; padding:5px 11px 5px 6px; cursor:pointer; flex-shrink:0; transition:border-color .15s, box-shadow .15s; }
+                    .dc-cc:hover { border-color:#cfd3d8; box-shadow:0 2px 8px rgba(15,23,42,0.06); }
+                    .dc-cc--static { cursor:default; border-color:#bce6cd; background:#fff; }
+                    .dc-ccico { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:800; font-size:0.7rem; flex-shrink:0; }
+                    .dc-cccode { font-family:'Syne',sans-serif; font-weight:800; font-size:0.82rem; color:#0f172a; }
+                    .dc-rate { display:flex; align-items:center; gap:0.65rem; padding:0.1rem; }
+                    .dc-rateline { flex:1; height:1px; background:#ebedf0; }
+                    .dc-ratepill { display:inline-flex; align-items:center; gap:6px; font-family:'DM Sans',sans-serif; font-size:0.72rem; color:#5b6470; white-space:nowrap; }
+                    .dc-ratearrow { width:28px; height:28px; border-radius:50%; background:#009d44; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,157,68,0.28); }
+                    .dc-dd { position:absolute; right:0; top:calc(100% + 6px); z-index:50; background:#fff; border:1px solid #e9ebee; border-radius:14px; box-shadow:0 16px 40px rgba(15,23,42,0.16); padding:6px; min-width:185px; }
+                    .dc-dditem { width:100%; display:flex; align-items:center; gap:10px; background:none; border:none; border-radius:10px; padding:9px 10px; cursor:pointer; text-align:left; }
+                    .dc-dditem:hover { background:#f5f6f8; }
+                    .dc-dditem.sel { background:#f1faf4; }
+                    .dc-destbtn { width:100%; display:flex; align-items:center; gap:0.7rem; background:#f6f7f9; border:1.5px solid #e5e7eb; border-radius:14px; padding:0.7rem 0.85rem; cursor:pointer; text-align:left; transition:border-color .15s; }
+                    .dc-destbtn:hover { border-color:#cfd3d8; }
+                    .dc-destico { width:38px; height:38px; border-radius:11px; background:#d9f3e3; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0; }
+                    .dc-desttt { display:block; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.84rem; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+                    .dc-destsub { display:block; font-size:0.7rem; color:#737b86; font-family:'JetBrains Mono',monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+                    .dc-cta { display:flex; align-items:center; gap:0.85rem; background:#f1faf4; border:1.5px dashed #6cc28d; border-radius:14px; padding:0.9rem 1rem; text-decoration:none; transition:background .15s, border-color .15s; }
+                    .dc-cta:hover { background:#e6f7ec; border-color:#009d44; }
+                    .dc-ctaplus { width:40px; height:40px; border-radius:12px; background:#009d44; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+                    .dc-ctabody { flex:1; min-width:0; }
+                    .dc-ctatt { display:block; font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem; color:#0f172a; }
+                    .dc-ctasub { display:block; font-family:'DM Sans',sans-serif; font-size:0.7rem; color:#5b6470; margin-top:2px; line-height:1.35; }
+                    .dc-go { width:100%; background:linear-gradient(135deg,#00ad4b,#007a34); color:#fff; border:none; padding:1rem; border-radius:14px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; box-shadow:0 6px 18px rgba(0,157,68,0.28); transition:transform .15s, box-shadow .15s, opacity .15s; }
+                    .dc-go:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 10px 24px rgba(0,157,68,0.36); }
+                    .dc-go:disabled { opacity:0.45; cursor:not-allowed; box-shadow:none; }
+                    .dc-err { font-family:'DM Sans',sans-serif; font-size:0.72rem; color:#dc2626; font-weight:600; text-align:center; }
+                    .dc-foot { font-family:'DM Sans',sans-serif; font-size:0.66rem; color:#a0a6ae; text-align:center; line-height:1.5; }
+                    @media (max-width:360px){ .dc-amount, .dc-recv { font-size:1.4rem; } }
+                </style>
+                @endpush
                 <div class="dc-calc" x-data="ksCalculator()" style="margin-bottom: 1.25rem;">
 
                     {{-- Header da calculadora --}}
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; gap:0.5rem;">
                         <div>
                             <div class="dc-section__title">💱 Iniciar Câmbio</div>
                             <div style="font-size:0.7rem; color:#737373; margin-top:1px;">
                                 Calcula e inicia a tua transação diretamente
                             </div>
                         </div>
+                        <div style="display:inline-flex; align-items:center; gap:6px; background:#d1f2e0; border-radius:999px; padding:5px 11px; flex-shrink:0;">
+                            <span class="ks-pulse" style="width:7px; height:7px; border-radius:50%; background:#009d44;"></span>
+                            <span style="font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.68rem; color:#007a34;">Taxa ao vivo</span>
+                        </div>
                     </div>
 
-                    <div style="background:white; border:1px solid #e5e5e5; border-radius:16px; padding:1.125rem; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                    <div class="dc-fxcard">
 
-                        {{-- SELETOR DE MOEDA --}}
-                        <div style="display:flex; gap:6px; margin-bottom:1rem;">
-                            <template x-for="curr in currencies" :key="curr.code">
-                                <button type="button"
-                                        @click="setCurrency(curr)"
-                                        :class="{'is-active': activeCurrency.code === curr.code}"
-                                        class="dc-calc-pill"
-                                        style="flex:1; padding:0.625rem 0.5rem; background:#fafafa; border:2px solid transparent; border-radius:10px; cursor:pointer; transition:all 0.2s; font-family:'Syne',sans-serif; font-weight:700; font-size:0.75rem; display:flex; flex-direction:column; align-items:center; gap:2px;"
-                                        :style="activeCurrency.code === curr.code ? `background:${curr.color}15; border-color:${curr.color}; color:${curr.color};` : ''">
-                                    <span style="font-size:1.1rem; line-height:1;" x-text="curr.flag"></span>
-                                    <span x-text="curr.code"></span>
-                                </button>
-                            </template>
-                        </div>
-
-                        {{-- INPUT DE VALOR --}}
-                        <div style="margin-bottom:0.75rem;">
-                            <label style="display:block; font-size:0.65rem; font-weight:700; color:#737373; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.375rem;">
-                                Quanto vais enviar
-                            </label>
-                            <div style="position:relative;">
-                                <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; color:#a3a3a3;" x-text="activeCurrency.symbol"></span>
-                                <input type="number"
-                                       inputmode="decimal"
-                                       step="0.01"
-                                       min="0"
-                                       x-model.number="amount"
-                                       @input="amount = Math.max(0, $event.target.valueAsNumber || 0)"
-                                       placeholder="0,00"
-                                       style="width:100%; padding:14px 14px 14px 44px; border:2px solid #e5e5e5; border-radius:12px; font-family:'DM Sans',sans-serif; font-size:1.1rem; font-weight:600; color:#000; background:#fafafa; outline:none; transition:all 0.2s;"
-                                       :style="amount > 0 ? 'border-color:#009d44; background:white;' : ''"
-                                       onfocus="this.style.borderColor='#009d44'; this.style.background='white';"
-                                       onblur="if(!this.value) { this.style.borderColor='#e5e5e5'; this.style.background='#fafafa'; }">
+                        {{-- ===== CONVERSOR (Envias → Recebes) ===== --}}
+                        {{-- ENVIAS --}}
+                        <div class="dc-fxblock">
+                            <div class="dc-fxlabel">Envias</div>
+                            <div class="dc-fxrow">
+                                <div style="position:relative; flex-shrink:0;">
+                                    <button type="button" class="dc-cc" @click="currOpen = !currOpen" aria-label="Escolher moeda de envio">
+                                        <span class="dc-ccico" :style="`background:${activeCurrency.color}1a; color:${activeCurrency.color}`" x-text="activeCurrency.symbol"></span>
+                                        <span class="dc-cccode" x-text="activeCurrency.code"></span>
+                                        <svg width="13" height="13" fill="none" stroke="#9aa4ae" stroke-width="2.5" viewBox="0 0 24 24" :style="currOpen?'transform:rotate(180deg);transition:.2s':'transition:.2s'"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </button>
+                                    <div x-show="currOpen" x-cloak @click.outside="currOpen = false" class="dc-dd">
+                                        <template x-for="curr in currencies" :key="curr.code">
+                                            <button type="button" class="dc-dditem" :class="{ sel: activeCurrency.code === curr.code }" @click="setCurrency(curr)">
+                                                <span class="dc-ccico" :style="`background:${curr.color}1a; color:${curr.color}`" x-text="curr.symbol"></span>
+                                                <span style="flex:1; font-family:'Syne',sans-serif; font-weight:700; font-size:0.85rem; color:#0f172a;" x-text="curr.code"></span>
+                                                <svg x-show="activeCurrency.code === curr.code" width="15" height="15" fill="none" stroke="#009d44" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                                <input type="number" inputmode="decimal" step="0.01" min="0" class="dc-amount"
+                                       x-model="amount" placeholder="0,00" aria-label="Valor a enviar">
                             </div>
                         </div>
 
-                        {{-- INDICADOR DE TAXA --}}
-                        <div style="display:flex; align-items:center; justify-content:center; padding:0.5rem 0; font-size:0.7rem; color:#737373;">
-                            <svg width="16" height="16" fill="none" stroke="#009d44" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right:6px;">
-                                <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>1 <strong x-text="activeCurrency.code"></strong> = </span>
-                            <strong style="margin: 0 4px; color:#000; font-family:'JetBrains Mono',monospace;" x-text="formatNumber(activeCurrency.rate)"></strong>
-                            <span>Kz</span>
+                        {{-- DIVISOR COM A TAXA --}}
+                        <div class="dc-rate">
+                            <span class="dc-ratearrow"><svg width="15" height="15" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                            <span class="dc-ratepill">1&nbsp;<strong x-text="activeCurrency.code" style="color:#0f172a;"></strong>&nbsp;=&nbsp;<strong style="color:#009d44; font-family:'JetBrains Mono',monospace;" x-text="formatNumber(activeCurrency.rate)"></strong>&nbsp;Kz</span>
+                            <span class="dc-rateline"></span>
                         </div>
 
-                        {{-- RESULTADO --}}
-                        <div style="background:linear-gradient(135deg,#000 0%,#171717 100%); border-radius:14px; padding:1rem 1.125rem; margin-top:0.5rem; position:relative; overflow:hidden;">
-                            <div style="position:absolute; top:-30px; right:-30px; width:120px; height:120px; background:radial-gradient(circle, rgba(0,157,68,0.2), transparent); pointer-events:none;"></div>
-
-                            <div style="font-size:0.65rem; font-weight:700; color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; position:relative;">
-                                Vais receber
+                        {{-- RECEBES --}}
+                        <div class="dc-fxblock dc-fxblock--recv">
+                            <div class="dc-fxrow" style="margin-bottom:0.55rem;">
+                                <div class="dc-fxlabel" style="margin:0; flex:1;">Recebes</div>
+                                <span class="dc-cc dc-cc--static">
+                                    <span class="dc-ccico" style="background:#d9f3e3; color:#007a34;">Kz</span>
+                                    <span class="dc-cccode" style="color:#007a34;">AOA</span>
+                                </span>
                             </div>
-                            <div style="display:flex; align-items:baseline; gap:8px; position:relative;">
-                                <span style="font-family:'Syne',sans-serif; font-weight:800; font-size:1.6rem; color:white; letter-spacing:-0.02em; line-height:1;"
-                                      x-text="formatNumber(received)"></span>
-                                <span style="font-family:'Syne',sans-serif; font-weight:700; color:#009d44; font-size:0.9rem;">Kz</span>
-                            </div>
-                            <div style="font-size:0.65rem; color:rgba(255,255,255,0.5); margin-top:6px; position:relative;"
-                                 x-show="amount > 0">
-                                <span x-text="`${formatNumber(amount)} ${activeCurrency.code}`"></span>
-                                ·
-                                <span x-text="`Taxa ${formatNumber(activeCurrency.rate)} Kz`"></span>
-                            </div>
-                            <div style="font-size:0.65rem; color:rgba(255,255,255,0.5); margin-top:6px; position:relative;"
-                                 x-show="amount === 0 || !amount">
-                                Introduz um valor para simular
+                            <div class="dc-recv" :class="amountNum > 0 ? 'has' : 'zero'">
+                                <span x-text="amountNum > 0 ? formatNumber(received, 0) : 'Introduz um valor'"></span><span x-show="amountNum > 0" style="font-family:'Syne',sans-serif; font-weight:700; color:#009d44; font-size:0.95rem;">&nbsp;Kz</span>
                             </div>
                         </div>
 
-                        {{-- BOTÃO INICIAR TRANSAÇÃO --}}
+                        {{-- SELETOR DE DESTINO + BOTÃO INICIAR --}}
                         @if($kycStatus['approved'])
-                            <form method="POST" action="{{ route('transaction.store') }}" x-show="amount >= 10" style="margin-top:0.875rem;">
+                            {{-- Onde receber (com destinos) --}}
+                            <div x-show="destinations.length > 0" style="margin-top:0.9rem; position:relative;">
+                                <div class="dc-fxlabel">Receber em</div>
+                                <button type="button" class="dc-destbtn" @click="destOpen = !destOpen">
+                                    <span class="dc-destico" x-text="selectedDest?.icon === 'bank' ? '🏦' : '👛'"></span>
+                                    <span style="flex:1; min-width:0;">
+                                        <span class="dc-desttt" x-text="selectedDest?.title"></span>
+                                        <span class="dc-destsub" x-text="selectedDest?.subtitle"></span>
+                                    </span>
+                                    <svg width="16" height="16" fill="none" stroke="#9aa4ae" stroke-width="2.5" viewBox="0 0 24 24" :style="destOpen ? 'transform:rotate(180deg);transition:.2s' : 'transition:.2s'"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                                <div x-show="destOpen" x-cloak @click.outside="destOpen = false" class="dc-dd" style="left:0; right:0; max-height:260px; overflow-y:auto;">
+                                    <template x-for="d in destinations" :key="`${d.type}:${d.id}`">
+                                        <button type="button" class="dc-dditem" :class="{ sel: destKey === `${d.type}:${d.id}` }" @click="setDest(d)">
+                                            <span class="dc-destico" style="width:30px; height:30px; border-radius:8px; font-size:0.9rem;" x-text="d.icon === 'bank' ? '🏦' : '👛'"></span>
+                                            <span style="flex:1; min-width:0;">
+                                                <span class="dc-desttt" style="font-size:0.8rem;" x-text="d.title"></span>
+                                                <span class="dc-destsub" style="font-size:0.66rem;" x-text="d.subtitle"></span>
+                                            </span>
+                                            <svg x-show="destKey === `${d.type}:${d.id}`" width="16" height="16" fill="none" stroke="#009d44" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </button>
+                                    </template>
+                                    <a href="{{ route('dashboard', ['tab' => 'iban']) }}" style="display:flex; align-items:center; gap:0.4rem; justify-content:center; padding:0.625rem; color:#009d44; font-weight:700; font-size:0.75rem; text-decoration:none; border-top:1px solid #f0f0f0; margin-top:4px;">+ Adicionar destino</a>
+                                </div>
+                            </div>
+
+                            {{-- Sem destinos: CTA (bloco próprio, robusto) --}}
+                            <a x-show="destinations.length === 0" href="{{ route('dashboard', ['tab' => 'iban']) }}" class="dc-cta" style="margin-top:0.9rem;">
+                                <span class="dc-ctaplus"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></span>
+                                <span class="dc-ctabody">
+                                    <span class="dc-ctatt">Adiciona onde queres receber</span>
+                                    <span class="dc-ctasub">Precisas de um IBAN ou carteira para receberes os Kwanzas.</span>
+                                </span>
+                                <svg width="18" height="18" fill="none" stroke="#009d44" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </a>
+
+                            {{-- Mensagem de validação (mín/máx) --}}
+                            <div x-show="errorText" x-cloak class="dc-err" style="margin-top:0.6rem;" x-text="errorText"></div>
+
+                            {{-- Botão iniciar (desativado até ser válido) --}}
+                            <form method="POST" action="{{ route('transaction.store') }}" x-show="destinations.length > 0" style="margin-top:0.9rem;">
                                 @csrf
                                 <input type="hidden" name="moeda" :value="activeCurrency.id">
-                                <input type="hidden" name="valor_enviar" :value="amount">
-                                <button type="submit"
-                                        style="width:100%; background:linear-gradient(135deg,#009d44,#007a34); color:white; border:none; padding:1rem; border-radius:12px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.875rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; box-shadow:0 4px 16px rgba(0,157,68,0.3);"
-                                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,157,68,0.4)'"
-                                        onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(0,157,68,0.3)'">
+                                <input type="hidden" name="valor_enviar" :value="amountNum">
+                                <input type="hidden" name="destino_tipo" :value="selectedDest?.type">
+                                <input type="hidden" name="destino_id" :value="selectedDest?.id">
+                                <button type="submit" class="dc-go" :disabled="!canSubmit">
                                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                                     Iniciar Transação
                                 </button>
                             </form>
-                            <div x-show="amount > 0 && amount < 10" style="margin-top:0.75rem; font-size:0.7rem; color:#d97706; text-align:center; font-weight:600;">
-                                ⚠️ Valor mínimo: 10 <span x-text="activeCurrency.code"></span>
-                            </div>
                         @elseif(!auth()->user()->email_verified_at)
                             <div style="margin-top:0.875rem; background:#fef3c7; border:1px solid #f59e0b; border-radius:12px; padding:0.875rem; text-align:center; font-size:0.8rem; color:#78350f;">
                                 <strong>Verifica o teu email</strong> para iniciar transações.
@@ -1162,8 +1272,8 @@
         <div x-show="activeTab === 'profile'" x-transition.opacity x-cloak>
             <div class="dc-profile-hero">
                 <div class="dc-profile-hero__avatar">
-                    @if(ks_file($user->profile_photo_path))
-                        <img src="{{ ks_file($user->profile_photo_path) }}" alt="">
+                    @if(ks_file($user->display_photo_path))
+                        <img loading="lazy" decoding="async" src="{{ ks_file($user->display_photo_path) }}" alt="">
                     @else
                         {{ strtoupper(substr($firstName, 0, 1)) }}
                     @endif
@@ -1284,30 +1394,69 @@
 function ksCalculator() {
     return {
         currencies: @json($ratesForJs),
-        amount: 0,
+        destinations: @json($destinationsForJs),
+        amount: '',
         activeCurrency: null,
+        selectedDest: null,
+        destOpen: false,
+        currOpen: false,
+        MIN: 10,
+        MAX: 50000,
 
         init() {
             const lastCode = localStorage.getItem('ks_calc_currency') || 'EUR';
             this.activeCurrency = this.currencies.find(c => c.code === lastCode) || this.currencies[0];
+            this.selectedDest = this.destinations[0] || null;
         },
 
         setCurrency(curr) {
             this.activeCurrency = curr;
+            this.currOpen = false;
             localStorage.setItem('ks_calc_currency', curr.code);
         },
 
-        get received() {
-            if (!this.amount || this.amount <= 0) return 0;
-            return this.amount * this.activeCurrency.rate;
+        setDest(d) {
+            this.selectedDest = d;
+            this.destOpen = false;
         },
 
-        formatNumber(val) {
-            if (!val && val !== 0) return '0';
-            return parseFloat(val).toLocaleString('pt-PT', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-            });
+        get destKey() {
+            return this.selectedDest ? `${this.selectedDest.type}:${this.selectedDest.id}` : '';
+        },
+
+        /** Valor numérico do input (nunca float na lógica de negócio — só apresentação). */
+        get amountNum() {
+            const n = parseFloat(String(this.amount).replace(',', '.'));
+            return isFinite(n) && n > 0 ? n : 0;
+        },
+
+        get received() {
+            return this.amountNum > 0 ? this.amountNum * this.activeCurrency.rate : 0;
+        },
+
+        get belowMin() { return this.amountNum > 0 && this.amountNum < this.MIN; },
+        get aboveMax() { return this.amountNum > this.MAX; },
+
+        get errorText() {
+            if (this.belowMin) return `O valor mínimo é ${this.MIN} ${this.activeCurrency.code}.`;
+            if (this.aboveMax) return `O valor máximo por transação é 50.000 ${this.activeCurrency.code}.`;
+            return '';
+        },
+
+        /** Pode submeter: valor dentro dos limites E destino escolhido. */
+        get canSubmit() {
+            return this.amountNum >= this.MIN && this.amountNum <= this.MAX && !!this.selectedDest;
+        },
+
+        /** Formatação pt-AO: '.' para milhares, ',' para decimais. */
+        formatNumber(val, dec = 2) {
+            let n = parseFloat(val);
+            if (!isFinite(n)) n = 0;
+            const fixed = Math.abs(n).toFixed(dec);
+            let parts = fixed.split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            let out = (parts[1] && parseInt(parts[1], 10) !== 0) ? parts[0] + ',' + parts[1].replace(/0+$/, '') : parts[0];
+            return (n < 0 ? '-' : '') + out;
         }
     };
 }

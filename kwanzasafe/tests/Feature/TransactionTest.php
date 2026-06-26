@@ -1,9 +1,23 @@
 <?php
 
+use App\Models\Beneficiary;
 use App\Models\ExchangeRate;
 use App\Models\Transaction;
 use App\Models\User;
 use Database\Factories\ExchangeRateFactory;
+
+/** Cria um beneficiário do utilizador e devolve os campos de destino para o POST. */
+function webBankDestino(User $user): array
+{
+    $b = Beneficiary::create([
+        'user_id'     => $user->id,
+        'bank_name'   => 'BAI',
+        'iban'        => 'AO06004400006729503010102',
+        'holder_name' => $user->full_name ?: 'Titular Teste',
+    ]);
+
+    return ['destino_tipo' => 'bank', 'destino_id' => $b->id];
+}
 
 // ---------------------------------------------------------------------------
 // Criar transação
@@ -17,7 +31,7 @@ it('creates a transaction for a fully-verified client', function () {
         ->post(route('transaction.store'), [
             'moeda'        => $rate->id,
             'valor_enviar' => 100,
-        ]);
+        ] + webBankDestino($user));
 
     $response->assertRedirect();
     $this->assertDatabaseHas('transactions', [
@@ -36,7 +50,7 @@ it('posts an automatic system message when a transaction is created', function (
         ->post(route('transaction.store'), [
             'moeda'        => $rate->id,
             'valor_enviar' => 100,
-        ])
+        ] + webBankDestino($user))
         ->assertRedirect();
 
     $transaction = Transaction::where('user_id', $user->id)->firstOrFail();
@@ -57,7 +71,7 @@ it('blocks transaction creation when KYC is incomplete', function () {
         ->post(route('transaction.store'), [
             'moeda'        => $rate->id,
             'valor_enviar' => 100,
-        ]);
+        ] + webBankDestino($user));
 
     $response->assertRedirect(route('dashboard'));
     $this->assertDatabaseMissing('transactions', ['user_id' => $user->id]);

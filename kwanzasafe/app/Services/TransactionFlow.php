@@ -93,15 +93,34 @@ class TransactionFlow
             LedgerService::recordTransactionCompleted($transaction->fresh(), $actor);
         }
 
+        $client = $transaction->fresh()->user;
+        $notifiableStatuses = ['negotiating','awaiting_payment','payment_received','aoa_sent','completed','cancelled','expired'];
+
         try {
-            $client = $transaction->fresh()->user;
-            $emailableStatuses = ['negotiating','awaiting_payment','payment_received','aoa_sent','completed','cancelled','expired'];
-            if ($client && in_array($newStatus, $emailableStatuses, true)) {
+            if ($client && in_array($newStatus, $notifiableStatuses, true)) {
                 \Illuminate\Support\Facades\Mail::to($client->email)
                     ->send(new \App\Mail\TransactionStatusMail($transaction, $client, $newStatus));
             }
         } catch (\Throwable) {
             // Mail failure must never break a completed transition
+        }
+
+        // Notificação push (Expo) + feed — espelham o email de estado; nunca quebram.
+        if ($client && in_array($newStatus, $notifiableStatuses, true)) {
+            $body = self::SYSTEM_MESSAGES[$newStatus] ?? 'Atualização da tua transação.';
+            PushService::sendToUser(
+                $client,
+                'Transação '.$transaction->reference_id,
+                $body,
+                ['reference_id' => $transaction->reference_id, 'status' => $newStatus],
+            );
+            NotificationService::notify(
+                $client,
+                'transaction',
+                'Transação '.$transaction->reference_id,
+                $body,
+                ['reference_id' => $transaction->reference_id, 'status' => $newStatus],
+            );
         }
 
         return true;

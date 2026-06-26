@@ -109,7 +109,7 @@ body { background:#f5f5f5; }
         Lista KYC
     </a>
     <div style="display:flex;align-items:center;gap:0.625rem;">
-        <img src="{{ asset('assets/images/logos/logo1.png') }}" class="kycs-topbar__logo" alt="KwanzaSafe">
+        <img src="{{ asset('assets/images/logos/logo-icone.png') }}" class="kycs-topbar__logo" alt="KwanzaSafe">
         <span class="kycs-topbar__title">Revisão KYC</span>
     </div>
     <div style="font-size:0.65rem;color:#a3a3a3;font-family:'JetBrains Mono',monospace;">ID #{{ $kycUser->id }}</div>
@@ -165,7 +165,7 @@ body { background:#f5f5f5; }
                 <div class="kycs-hero">
                     <div class="kycs-hero__avatar">
                         @if(ks_file($kycUser->profile_photo_path))
-                            <img src="{{ ks_file($kycUser->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
+                            <img loading="lazy" decoding="async" src="{{ ks_file($kycUser->profile_photo_path) }}" style="width:100%;height:100%;object-fit:cover;">
                         @else
                             {{ strtoupper(substr($kycUser->full_name ?? $kycUser->email, 0, 1)) }}
                         @endif

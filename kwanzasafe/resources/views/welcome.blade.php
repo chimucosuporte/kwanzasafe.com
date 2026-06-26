@@ -1,83 +1,11 @@
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<x-public-layout
+    title="KwanzaSafe — Envia Euros, Reais e USDC para Angola com Segurança"
+    description="Carteira internacional para remessas seguras para Angola. Converte Euros, Reais e USDC em Kwanzas (AOA) com rapidez e total confiança."
+    :canonical="url('/')">
 
-    {{-- ============ SEO PRIMARY ============ --}}
-    <title>KwanzaSafe — Envia Euros, Reais e USDC para Angola com Segurança</title>
-    <meta name="description" content="Carteira internacional para remessas seguras para Angola. Converte Euros (EUR), Reais Brasileiros (BRL) e USDC em Kwanzas (AOA) com rapidez e total confiança.">
-    <meta name="keywords" content="enviar dinheiro para Angola, remessa Angola, câmbio Kwanza, EUR para AOA, BRL para Kwanza, USDC Angola, carteira internacional, remessa segura, cambio online Angola">
-    <meta name="author" content="KwanzaSafe">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://kwanzasafe.com/">
-
-    {{-- ============ OPEN GRAPH (Facebook, LinkedIn, WhatsApp) ============ --}}
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="pt_AO">
-    <meta property="og:url" content="https://kwanzasafe.com/">
-    <meta property="og:site_name" content="KwanzaSafe">
-    <meta property="og:title" content="KwanzaSafe — Envia Euros, Reais e USDC para Angola">
-    <meta property="og:description" content="Conversão segura de Euros, Reais e USDC para Kwanzas — do mundo para Angola, com rapidez e total confiança.">
-    <meta property="og:image" content="{{ asset('assets/images/logos/logo1.png') }}">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-
-    {{-- ============ TWITTER CARD ============ --}}
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="KwanzaSafe — Remessas Internacionais para Angola">
-    <meta name="twitter:description" content="Envia Euros, Reais e USDC para Angola de forma segura e rápida. Conversão transparente em Kwanzas.">
-    <meta name="twitter:image" content="{{ asset('assets/images/logos/logo1.png') }}">
-
-    {{-- ============ SCHEMA.ORG / JSON-LD ============ --}}
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FinancialService",
-      "name": "KwanzaSafe",
-      "description": "Carteira internacional para remessas seguras do mundo para Angola. Converte Euros, Reais e USDC em Kwanzas.",
-      "url": "https://kwanzasafe.com",
-      "logo": "{{ asset('assets/images/logos/logo1.png') }}",
-      "image": "{{ asset('assets/images/logos/logo1.png') }}",
-      "telephone": "+55-11-93357-9009",
-      "priceRange": "$",
-      "address": {
-        "@type": "PostalAddress",
-        "addressCountry": "AO",
-        "addressLocality": "Angola"
-      },
-      "areaServed": {
-        "@type": "Country",
-        "name": "Angola"
-      },
-      "serviceType": [
-        "Remessa Internacional",
-        "Câmbio de Divisas",
-        "Conversão de Criptomoedas",
-        "EUR para AOA",
-        "BRL para AOA",
-        "USDC para AOA"
-      ],
-      "sameAs": [
-        "https://wa.me/5511933579009"
-      ]
-    }
-    </script>
-
-    {{-- ============ FAVICON ============ --}}
-    <link rel="icon" type="image/png" href="{{ asset('assets/images/logos/logo.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/images/logos/logo1.png') }}">
-
-    {{-- ============ FONTES ============ --}}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-
-    {{-- ============ TAILWIND + ALPINE ============ --}}
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
+<x-slot:head>
+    {{-- Preload do hero (LCP) --}}
+    <link rel="preload" as="image" href="{{ asset('assets/images/banners/banner-1.svg') }}" type="image/svg+xml">
     <style>
         :root {
             --ks-green: #009d44;
@@ -100,53 +28,53 @@
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         [x-cloak] { display: none !important; }
 
-        /* ============ HEADER ============ */
-        .ks-header { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--ks-gray-200); }
-        .ks-header-inner { max-width: 1200px; margin: 0 auto; padding: 0.875rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
-        .ks-logo-link { display: flex; align-items: center; gap: 0.625rem; text-decoration: none; }
-        .ks-logo-img { height: 36px; width: auto; }
-        .ks-logo-img.mobile { display: none; }
-        .ks-logo-img.tablet { display: none; }
-        .ks-nav { display: flex; gap: 2rem; align-items: center; }
-        .ks-nav a { color: var(--ks-gray-700); font-weight: 500; font-size: 0.9rem; text-decoration: none; transition: color 0.15s; }
-        .ks-nav a:hover { color: var(--ks-green); }
-        .ks-nav-cta { background: var(--ks-green); color: var(--ks-white) !important; padding: 0.5rem 1.125rem; border-radius: 999px; font-weight: 700 !important; transition: background 0.15s; }
-        .ks-nav-cta:hover { background: var(--ks-green-dark); color: var(--ks-white) !important; }
-        .ks-mobile-toggle { display: none; background: none; border: none; cursor: pointer; }
-
-        @media(max-width: 768px) {
-            .ks-logo-img { display: none; }
-            .ks-logo-img.mobile { display: block; height: 32px; }
-            .ks-nav { display: none; }
-            .ks-mobile-toggle { display: block; }
-            .ks-nav.open { display: flex; position: absolute; top: 100%; left: 0; right: 0; background: white; flex-direction: column; padding: 1.5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-top: 1px solid var(--ks-gray-200); }
+        /* Reveal ao scroll */
+        .ks-reveal { opacity: 0; transform: translateY(26px); transition: opacity .65s cubic-bezier(.4,0,.2,1), transform .65s cubic-bezier(.4,0,.2,1); will-change: opacity, transform; }
+        .ks-reveal.ks-in { opacity: 1; transform: translateY(0); }
+        .ks-reveal.d1 { transition-delay: .08s; }
+        .ks-reveal.d2 { transition-delay: .16s; }
+        .ks-reveal.d3 { transition-delay: .24s; }
+        .ks-reveal.d4 { transition-delay: .32s; }
+        @media (prefers-reduced-motion: reduce) {
+            .ks-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+            .ks-menu-panel.open .ks-menu-nav a { animation: none; opacity: 1; transform: none; }
         }
+
+        /* ============ ESTATÍSTICAS ============ */
+        .ks-stats { background: var(--ks-green-pale); border-top: 1px solid var(--ks-green-light); border-bottom: 1px solid var(--ks-green-light); padding: 3rem 1.5rem; }
+        .ks-stats-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        .ks-stat { text-align: center; }
+        .ks-stat-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.4rem; color: var(--ks-green-dark); line-height: 1; letter-spacing: -0.02em; }
+        .ks-stat-label { font-size: 0.82rem; color: var(--ks-gray-700); margin-top: 0.5rem; font-weight: 500; }
+        @media (max-width: 720px) { .ks-stats-inner { grid-template-columns: repeat(2, 1fr); gap: 2rem 1rem; } .ks-stat-num { font-size: 2rem; } }
+
+        /* ============ TESTEMUNHOS (carrossel) ============ */
+        .ks-test { padding: 5.5rem 1.5rem; background: #fff; }
+        .ks-test-inner { max-width: 980px; margin: 0 auto; }
+        .ks-test-head { text-align: center; margin-bottom: 2.5rem; }
+        .ks-tcar { position: relative; }
+        .ks-tcar-viewport { overflow: hidden; border-radius: 22px; }
+        .ks-tcar-track { display: flex; transition: transform .55s cubic-bezier(.4,0,.2,1); }
+        .ks-tslide { min-width: 100%; padding: 0.25rem; }
+        .ks-tcard { background: var(--ks-gray-50); border: 1px solid var(--ks-gray-200); border-radius: 20px; padding: 2.5rem; }
+        .ks-tstars { color: #f5b301; font-size: 1rem; letter-spacing: 2px; margin-bottom: 1.1rem; }
+        .ks-tquote { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 1.25rem; line-height: 1.5; color: #171717; letter-spacing: -0.01em; }
+        .ks-tquote::before { content: '“'; color: var(--ks-green-dark); font-size: 1.6rem; font-weight: 800; }
+        .ks-tperson { display: flex; align-items: center; gap: 0.9rem; margin-top: 1.6rem; }
+        .ks-tavatar { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.05rem; color: #fff; flex-shrink: 0; }
+        .ks-tname { font-weight: 700; font-size: 0.95rem; color: #000; }
+        .ks-tloc { font-size: 0.8rem; color: var(--ks-gray-500); }
+        .ks-tcar-controls { display: flex; align-items: center; justify-content: center; gap: 1.25rem; margin-top: 1.75rem; }
+        .ks-tcar-arrow { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--ks-gray-200); background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #404040; transition: all .15s; }
+        .ks-tcar-arrow:hover { border-color: var(--ks-green-dark); color: var(--ks-green-dark); background: var(--ks-green-pale); }
+        .ks-tcar-dots { display: flex; gap: 8px; }
+        .ks-tdot { width: 9px; height: 9px; border-radius: 999px; border: none; background: var(--ks-gray-200); cursor: pointer; padding: 0; transition: all .25s; }
+        .ks-tdot.active { background: var(--ks-green); width: 26px; }
+        @media (max-width: 600px) { .ks-tcard { padding: 1.75rem; } .ks-tquote { font-size: 1.1rem; } }
         @media(min-width: 769px) and (max-width: 1024px) {
             .ks-logo-img { display: none; }
             .ks-logo-img.tablet { display: block; height: 34px; }
         }
-
-        /* ============ HERO ============ */
-        .ks-hero { background: linear-gradient(180deg, #ffffff 0%, #f0faf4 100%); padding: 4rem 1.5rem 5rem; position: relative; overflow: hidden; }
-        .ks-hero::before { content: ''; position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(0,157,68,0.08) 0%, transparent 70%); pointer-events: none; }
-        .ks-hero-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1.1fr 1fr; gap: 3rem; align-items: center; position: relative; z-index: 1; }
-
-        .ks-hero-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--ks-green-light); color: var(--ks-green-dark); padding: 0.375rem 0.875rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1.25rem; border: 1px solid rgba(0,157,68,0.2); }
-        .ks-hero-badge::before { content: ''; width: 6px; height: 6px; background: var(--ks-green); border-radius: 50%; box-shadow: 0 0 8px var(--ks-green); animation: pulse-dot 2s infinite; }
-        @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-        .ks-hero-title { font-family: 'Syne', sans-serif; font-size: 3.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 0 0 1.125rem; color: var(--ks-black); }
-        .ks-hero-title .highlight { color: var(--ks-green); }
-        .ks-hero-sub { font-size: 1.125rem; line-height: 1.6; color: var(--ks-gray-700); margin: 0 0 2rem; max-width: 540px; }
-        .ks-hero-ctas { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2rem; }
-        .ks-btn-primary { background: var(--ks-black); color: var(--ks-white); padding: 0.875rem 1.75rem; border-radius: 999px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; border: 2px solid var(--ks-black); }
-        .ks-btn-primary:hover { background: var(--ks-green); border-color: var(--ks-green); transform: translateY(-1px); }
-        .ks-btn-ghost { background: transparent; color: var(--ks-black); padding: 0.875rem 1.75rem; border-radius: 999px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; border: 2px solid var(--ks-black); transition: all 0.2s; }
-        .ks-btn-ghost:hover { background: var(--ks-black); color: var(--ks-white); }
-
-        .ks-hero-trust { display: flex; gap: 1.5rem; flex-wrap: wrap; padding-top: 1.5rem; border-top: 1px solid var(--ks-gray-200); }
-        .ks-trust-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--ks-gray-700); font-weight: 500; }
-        .ks-trust-item svg { color: var(--ks-green); flex-shrink: 0; }
 
         /* ============ CALCULADORA HERO ============ */
         .ks-calc-card { background: var(--ks-white); border-radius: 24px; padding: 2rem; box-shadow: 0 24px 60px rgba(0,0,0,0.12); border: 1px solid var(--ks-gray-200); position: relative; }
@@ -159,7 +87,7 @@
         .ks-field { margin-bottom: 1rem; }
         .ks-field-label { font-size: 0.7rem; font-weight: 700; color: var(--ks-gray-500); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.375rem; display: flex; justify-content: space-between; }
         .ks-field-group { display: flex; background: var(--ks-gray-50); border: 2px solid var(--ks-gray-200); border-radius: 14px; overflow: hidden; transition: border-color 0.2s; }
-        .ks-field-group:focus-within { border-color: var(--ks-green); background: var(--ks-white); }
+        .ks-field-group:focus-within { border-color: var(--ks-green-dark); background: var(--ks-white); }
         .ks-field-group select, .ks-field-group input { background: transparent; border: none; outline: none; font-family: 'Syne', sans-serif; font-weight: 700; padding: 0.875rem; font-size: 1.1rem; color: var(--ks-black); }
         .ks-field-group select { width: auto; border-right: 2px solid var(--ks-gray-200); cursor: pointer; font-size: 0.95rem; padding: 0.875rem 0.75rem; min-width: 95px; }
         .ks-field-group input { flex: 1; text-align: right; width: 100%; }
@@ -184,16 +112,16 @@
 
         /* ============ CURRENCIES SECTION ============ */
         .ks-section { padding: 5rem 1.5rem; max-width: 1200px; margin: 0 auto; }
-        .ks-section-label { display: inline-block; font-size: 0.75rem; font-weight: 700; color: var(--ks-green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+        .ks-section-label { display: inline-block; font-size: 0.75rem; font-weight: 700; color: var(--ks-green-dark); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
         .ks-section-title { font-family: 'Syne', sans-serif; font-size: 2.25rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin: 0 0 0.875rem; color: var(--ks-black); }
         .ks-section-sub { font-size: 1rem; color: var(--ks-gray-700); line-height: 1.6; max-width: 640px; margin: 0 0 2.5rem; }
 
         .ks-currencies { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
         .ks-currency-card { background: var(--ks-white); border: 1px solid var(--ks-gray-200); border-radius: 20px; padding: 2rem; text-align: center; transition: all 0.25s; cursor: default; }
-        .ks-currency-card:hover { border-color: var(--ks-green); transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0,0,0,0.08); }
+        .ks-currency-card:hover { border-color: var(--ks-green-dark); transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0,0,0,0.08); }
         .ks-currency-flag { font-size: 3rem; line-height: 1; margin-bottom: 0.75rem; display: block; }
         .ks-currency-name { font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; color: var(--ks-black); }
-        .ks-currency-code { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; color: var(--ks-green); letter-spacing: 0.1em; margin-top: 0.25rem; }
+        .ks-currency-code { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; color: var(--ks-green-dark); letter-spacing: 0.1em; margin-top: 0.25rem; }
         .ks-currency-desc { font-size: 0.85rem; color: var(--ks-gray-500); margin-top: 0.75rem; line-height: 1.5; }
 
         @media(max-width: 768px) { .ks-currencies { grid-template-columns: 1fr; } .ks-section { padding: 3rem 1rem; } .ks-section-title { font-size: 1.75rem; } }
@@ -201,7 +129,7 @@
         /* ============ HOW IT WORKS ============ */
         .ks-how-section { background: var(--ks-black); color: var(--ks-white); padding: 5rem 1.5rem; }
         .ks-how-inner { max-width: 1200px; margin: 0 auto; }
-        .ks-how-section .ks-section-label { color: var(--ks-green); }
+        .ks-how-section .ks-section-label { color: var(--ks-green-dark); }
         .ks-how-section .ks-section-title { color: var(--ks-white); }
         .ks-how-section .ks-section-sub { color: #a3a3a3; }
 
@@ -216,7 +144,7 @@
         /* ============ WHY SECTION ============ */
         .ks-why { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
         .ks-why-card { padding: 1.75rem; border-radius: 18px; background: var(--ks-gray-50); border: 1px solid var(--ks-gray-200); transition: all 0.2s; }
-        .ks-why-card:hover { background: var(--ks-white); border-color: var(--ks-green); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+        .ks-why-card:hover { background: var(--ks-white); border-color: var(--ks-green-dark); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
         .ks-why-icon { width: 44px; height: 44px; background: var(--ks-green); color: var(--ks-white); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
         .ks-why-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800; margin: 0 0 0.375rem; color: var(--ks-black); }
         .ks-why-desc { font-size: 0.85rem; color: var(--ks-gray-700); line-height: 1.5; margin: 0; }
@@ -229,7 +157,7 @@
         .ks-faq-item { border-bottom: 1px solid var(--ks-gray-200); padding: 1.25rem 0; }
         .ks-faq-q { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: var(--ks-black); }
         .ks-faq-q::-webkit-details-marker { display: none; }
-        .ks-faq-q::after { content: '+'; font-size: 1.5rem; color: var(--ks-green); font-weight: 400; transition: transform 0.2s; }
+        .ks-faq-q::after { content: '+'; font-size: 1.5rem; color: var(--ks-green-dark); font-weight: 400; transition: transform 0.2s; }
         details[open] .ks-faq-q::after { transform: rotate(45deg); }
         .ks-faq-a { margin-top: 0.75rem; font-size: 0.9rem; color: var(--ks-gray-700); line-height: 1.7; }
 
@@ -243,131 +171,76 @@
 
         @media(max-width: 768px) { .ks-cta-title { font-size: 1.75rem; } .ks-cta-sub { font-size: 1rem; } }
 
-        /* ============ FOOTER ============ */
-        .ks-footer { background: var(--ks-black); color: var(--ks-white); padding: 4rem 1.5rem 2rem; }
-        .ks-footer-inner { max-width: 1200px; margin: 0 auto; }
-        .ks-footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
-        .ks-footer-brand { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-        .ks-footer-brand img { height: 36px; filter: brightness(0) invert(1); }
-        .ks-footer-brand-name { font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; }
-        .ks-footer-desc { font-size: 0.875rem; color: #a3a3a3; line-height: 1.6; margin: 0 0 1.25rem; max-width: 320px; }
-        .ks-footer-wa { display: inline-flex; align-items: center; gap: 0.5rem; background: #25d366; color: var(--ks-white); padding: 0.5rem 1rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; text-decoration: none; }
-        .ks-footer-wa:hover { background: #1eb555; }
-        .ks-footer h4 { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 800; color: var(--ks-green); text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 1rem; }
-        .ks-footer ul { list-style: none; padding: 0; margin: 0; }
-        .ks-footer ul li { margin-bottom: 0.625rem; }
-        .ks-footer ul a { color: #a3a3a3; font-size: 0.875rem; text-decoration: none; transition: color 0.15s; }
-        .ks-footer ul a:hover { color: var(--ks-white); }
-        .ks-footer-bottom { padding-top: 2rem; border-top: 1px solid #262626; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
-        .ks-footer-copy { font-size: 0.75rem; color: #737373; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
-        .ks-footer-social { display: flex; gap: 0.75rem; }
-        .ks-footer-social a { width: 32px; height: 32px; background: #262626; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--ks-white); text-decoration: none; transition: background 0.15s; }
-        .ks-footer-social a:hover { background: var(--ks-green); }
-
-        @media(max-width: 968px) { .ks-footer-grid { grid-template-columns: 1fr 1fr; } }
-        @media(max-width: 480px) { .ks-footer-grid { grid-template-columns: 1fr; } .ks-footer-bottom { flex-direction: column; text-align: center; } }
-
-        /* ============ WHATSAPP FLUTUANTE ============ */
-        .ks-wa-float { position: fixed; bottom: 24px; right: 24px; background: #25d366; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 8px 24px rgba(37,211,102,0.4); z-index: 100; transition: transform 0.2s; }
-        .ks-wa-float:hover { transform: scale(1.1); background: #1eb555; }
-        .ks-wa-float::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 3px solid #25d366; opacity: 0.4; animation: wa-pulse 2s infinite; }
-        @keyframes wa-pulse { 0%,100%{opacity:0.4;transform:scale(1)} 50%{opacity:0;transform:scale(1.3)} }
     </style>
-</head>
-<body>
-
-    {{-- ============ HEADER ============ --}}
-    <header class="ks-header" x-data="{ mobileMenu: false }">
-        <div class="ks-header-inner">
-            <a href="{{ url('/') }}" class="ks-logo-link" aria-label="KwanzaSafe — página inicial">
-                <img src="{{ asset('assets/images/logos/logo.png') }}" alt="KwanzaSafe" class="ks-logo-img mobile">
-                <img src="{{ asset('assets/images/logos/logo2.png') }}" alt="KwanzaSafe" class="ks-logo-img tablet">
-                <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe" class="ks-logo-img">
-            </a>
-
-            <nav class="ks-nav" :class="{'open': mobileMenu}" aria-label="Navegação principal">
-                <a href="#como-funciona">Como Funciona</a>
-                <a href="#moedas">Moedas</a>
-                <a href="#faq">FAQ</a>
-                @auth
-                    <a href="{{ url('/dashboard') }}" class="ks-nav-cta">Meu Painel</a>
-                @else
-                    <a href="{{ route('login') }}">Entrar</a>
-                    <a href="{{ route('register') }}" class="ks-nav-cta">Criar Conta</a>
-                @endauth
-            </nav>
-
-            <button class="ks-mobile-toggle" @click="mobileMenu = !mobileMenu" aria-label="Abrir menu">
-                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
-            </button>
-        </div>
-    </header>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"De que países posso enviar?","acceptedAnswer":{"@type":"Answer","text":"Aceitamos transferências de qualquer país do mundo. As moedas suportadas são Euro (EUR) de toda a zona Euro, Real Brasileiro (BRL) do Brasil, e USDT/USDC via blockchain (sem fronteiras geográficas)."}},{"@type":"Question","name":"Quanto tempo demora a receber os Kwanzas?","acceptedAnswer":{"@type":"Answer","text":"Em dias úteis, após recebermos e validarmos o comprovativo de pagamento, os Kwanzas são creditados no IBAN angolano registado em até 4 horas. Operações iniciadas antes das 14h são concluídas no mesmo dia."}},{"@type":"Question","name":"Posso enviar de uma conta de outra pessoa?","acceptedAnswer":{"@type":"Answer","text":"Não. Por segurança e conformidade AML, o nome do titular da conta de origem deve corresponder exatamente ao teu BI registado na KwanzaSafe. Transferências de terceiros são automaticamente recusadas."}},{"@type":"Question","name":"Qual o valor mínimo por operação?","acceptedAnswer":{"@type":"Answer","text":"O mínimo é 10 unidades da moeda de origem (10 EUR, 10 BRL ou 10 USDT). Para valores acima de 5.000 EUR pode ser pedida documentação adicional por exigência regulatória."}},{"@type":"Question","name":"Que redes blockchain aceitam para USDT e USDC?","acceptedAnswer":{"@type":"Answer","text":"Aceitamos as principais redes: TRC20 (TRON), BEP20 (Binance Smart Chain) e ERC20 (Ethereum). Recomendamos TRC20 pela taxa de rede muito baixa."}},{"@type":"Question","name":"Como é calculada a taxa de câmbio?","acceptedAnswer":{"@type":"Answer","text":"As taxas são revistas ao longo do dia com base no mercado internacional e oficial de Angola. A taxa que vês na calculadora é a que será aplicada, sem surpresas."}},{"@type":"Question","name":"O que acontece se errar o IBAN de destino?","acceptedAnswer":{"@type":"Answer","text":"Antes de cada transação verificamos contigo o IBAN de destino. Se mesmo assim houver erro, entra em contacto imediato via chat ou WhatsApp."}}]}
+</script>
+</x-slot:head>
 
     {{-- ============ HERO ============ --}}
-    <section class="ks-hero">
-        <div class="ks-hero-inner">
-            <div>
-                <span class="ks-hero-badge">🌍 Plataforma Internacional</span>
+    {{-- ============ HERO (banner) ============ --}}
+    <section class="ks-herobanner" aria-label="Destaque">
+        <h1 class="ks-sronly">Envia Euros, Reais e USDC para Angola com segurança — conversão em Kwanzas em horas</h1>
+        @php
+            $heroDest = auth()->check() ? url('/dashboard') : route('register');
+            $heroCta  = auth()->check() ? 'Ir para o meu painel' : 'Criar conta grátis';
+            $banners = [
+                1 => 'Envia para Angola com segurança — Euros, Reais e USDC convertidos em Kwanzas em horas.',
+                2 => 'Taxa de câmbio transparente — vês quanto a tua família recebe antes de enviar.',
+                3 => 'Verificação KYC e anti-fraude AML — a tua transferência sempre protegida.',
+                4 => 'Recebe os Kwanzas no IBAN angolano em até 4 horas em dias úteis.',
+                5 => 'Suporte humano por WhatsApp em cada etapa da tua transferência.',
+            ];
+        @endphp
+        <div class="ks-bcar" x-data="ksBanners()" x-init="init()" @mouseenter="stop()" @mouseleave="start()"
+             role="region" aria-roledescription="carrossel" aria-label="Destaques KwanzaSafe">
+            <div class="ks-bcar-track" :style="`transform: translateX(-${i * 100}%)`">
+                @foreach($banners as $n => $alt)
+                    <a href="{{ $heroDest }}" class="ks-bcar-slide" aria-label="{{ $heroCta }}">
+                        <img src="{{ asset('assets/images/banners/banner-'.$n.'.svg') }}" alt="{{ $alt }}" width="1600" height="520" loading="{{ $n === 1 ? 'eager' : 'lazy' }}" {{ $n === 1 ? 'fetchpriority=high' : '' }}>
+                    </a>
+                @endforeach
+            </div>
+            <button class="ks-bcar-arrow prev" type="button" @click="prev()" aria-label="Destaque anterior">‹</button>
+            <button class="ks-bcar-arrow next" type="button" @click="next()" aria-label="Destaque seguinte">›</button>
+            <div class="ks-bcar-dots">
+                <template x-for="k in n" :key="k">
+                    <button class="ks-bcar-dot" type="button" :class="{ active: i === k - 1 }" @click="go(k - 1)" :aria-label="`Ir para o destaque ${k}`"></button>
+                </template>
+            </div>
+        </div>
+        <div class="ks-herobanner__trust">
+            <span class="ks-htrust"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg> Verificação KYC</span>
+            <span class="ks-htrust"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/></svg> Anti-fraude AML</span>
+            <span class="ks-htrust"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/></svg> Até 4 horas</span>
+            <span class="ks-htrust"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/></svg> Suporte humano</span>
+        </div>
+    </section>
 
-                <h1 class="ks-hero-title">
-                    Envia <span class="highlight">Euros, Reais e USDC</span> para Angola com segurança.
-                </h1>
-
-                <p class="ks-hero-sub">
-                    Conversão segura de Euros, Reais e USDC para Kwanzas — do mundo para Angola, com rapidez e total confiança. Soluções modernas para pagamentos internacionais, com segurança, eficiência e suporte profissional.
-                </p>
-
-                <div class="ks-hero-ctas">
-                    @auth
-                        <a href="{{ url('/dashboard') }}" class="ks-btn-primary">
-                            Meu Painel
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </a>
-                    @else
-                        <a href="{{ route('register') }}" class="ks-btn-primary">
-                            Começar agora
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </a>
-                        <a href="#como-funciona" class="ks-btn-ghost">Como funciona</a>
-                    @endauth
-                </div>
-
-                <div class="ks-hero-trust">
-                    <div class="ks-trust-item">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        Verificação KYC
-                    </div>
-                    <div class="ks-trust-item">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        Anti-fraude AML
-                    </div>
-                    <div class="ks-trust-item">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        Até 4 horas
-                    </div>
-                </div>
+    {{-- ============ SIMULADOR (calculadora) ============ --}}
+    <section class="ks-sec ks-sec--gray" id="simular">
+        <div class="ks-container" style="max-width: 560px;">
+            <div style="text-align:center; margin-bottom: 1.75rem;">
+                <span class="ks-eyebrow">Calculadora</span>
+                <h2 class="ks-h2 ks-reveal" style="margin-top:.5rem;">Simula o teu câmbio</h2>
+                <p class="ks-lead ks-reveal d1" style="margin-top:.5rem;">Vê quanto a tua família recebe em Kwanzas, com a taxa real — sem surpresas.</p>
             </div>
 
-            {{-- CALCULADORA --}}
-            <div class="ks-calc-card" x-data="heroCalc()" x-init="init()">
+            <div class="ks-calc-card ks-reveal" x-data="heroCalc()" x-init="init()">
                 <div class="ks-calc-header">
-                    <h2 class="ks-calc-title">Simular Câmbio</h2>
+                    <h3 class="ks-calc-title">Simular Câmbio</h3>
                     <span class="ks-calc-live">Tempo Real</span>
                 </div>
 
                 <div class="ks-field">
                     <div class="ks-field-label">
                         <span>Envias</span>
-                        <span style="color:var(--ks-green);font-weight:700;" x-show="amountSent >= 10">✓ Válido</span>
+                        <span style="color:var(--ks-green-dark);font-weight:700;" x-show="amountSent >= 10">✓ Válido</span>
                     </div>
                     <div class="ks-field-group">
                         <select x-model="currency" @change="recalc()" aria-label="Moeda de origem">
                             @foreach($rates as $r)
-                                @php
-                                    $flags = ['EUR'=>'🇪🇺','BRL'=>'🇧🇷','USDT'=>'₮'];
-                                    $flag  = $flags[$r->currency_from] ?? '💱';
-                                @endphp
-                                <option value="{{ $r->currency_from }}">{{ $flag }} {{ $r->currency_from }}</option>
+                                <option value="{{ $r->currency_from }}">{{ $r->currency_from }}</option>
                             @endforeach
                         </select>
                         <input type="number" x-model="amountSent" @input="recalc()" placeholder="100" min="10" step="0.01" inputmode="decimal" aria-label="Valor a enviar">
@@ -376,16 +249,14 @@
 
                 <div class="ks-arrow-swap">
                     <div class="ks-arrow-swap-btn">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
                 </div>
 
                 <div class="ks-field">
-                    <div class="ks-field-label">
-                        <span>Recebes em Angola</span>
-                    </div>
+                    <div class="ks-field-label"><span>Recebes em Angola</span></div>
                     <div class="ks-field-group" style="background: var(--ks-green-pale); border-color: rgba(0,157,68,0.3);">
-                        <div style="padding: 0.875rem; font-family:'Syne',sans-serif; font-weight: 700; font-size: 0.95rem; border-right: 2px solid rgba(0,157,68,0.15); min-width: 95px;">🇦🇴 AOA</div>
+                        <div style="display:flex; align-items:center; gap:.4rem; padding: 0.875rem; font-family:'Syne',sans-serif; font-weight: 700; font-size: 0.95rem; border-right: 2px solid rgba(0,157,68,0.15); min-width: 95px;"><x-flag code="aoa" :size="20" /> AOA</div>
                         <div style="flex:1; padding: 0.875rem; text-align: right; font-family:'Syne',sans-serif; font-weight: 800; font-size: 1.25rem; color: var(--ks-green-dark);" x-text="amountReceived > 0 ? formatKz(amountReceived) : '—'"></div>
                     </div>
                 </div>
@@ -396,14 +267,12 @@
                 </div>
 
                 @auth
-                    <a href="{{ url('/dashboard') }}" class="ks-calc-btn" style="text-decoration:none;">
-                        Iniciar Transação
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <a href="{{ url('/dashboard') }}" class="ks-calc-btn" style="text-decoration:none;">Iniciar Transação
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </a>
                 @else
-                    <a href="{{ route('register') }}" class="ks-calc-btn" style="text-decoration:none;">
-                        Criar Conta e Enviar
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <a href="{{ route('register') }}" class="ks-calc-btn" style="text-decoration:none;">Criar Conta e Enviar
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </a>
                 @endauth
 
@@ -416,27 +285,27 @@
     <section class="ks-section" id="moedas">
         <div style="text-align:center;">
             <span class="ks-section-label">Moedas Aceites</span>
-            <h2 class="ks-section-title">De qualquer parte do mundo para Angola</h2>
+            <h2 class="ks-section-title ks-reveal">De qualquer parte do mundo para Angola</h2>
             <p class="ks-section-sub" style="margin-left:auto;margin-right:auto;">
                 Aceitamos as 3 principais moedas usadas pela comunidade angolana no exterior — com conversão transparente em Kwanzas.
             </p>
         </div>
 
         <div class="ks-currencies">
-            <div class="ks-currency-card">
-                <span class="ks-currency-flag" role="img" aria-label="União Europeia">🇪🇺</span>
+            <div class="ks-currency-card ks-reveal">
+                <span class="ks-currency-flag" style="display:flex;justify-content:center;"><x-flag code="eur" :size="52" /></span>
                 <h3 class="ks-currency-name">Euro</h3>
                 <div class="ks-currency-code">EUR</div>
                 <p class="ks-currency-desc">Envia de Portugal, Espanha, França, Alemanha e restante zona Euro.</p>
             </div>
-            <div class="ks-currency-card">
-                <span class="ks-currency-flag" role="img" aria-label="Brasil">🇧🇷</span>
+            <div class="ks-currency-card ks-reveal">
+                <span class="ks-currency-flag" style="display:flex;justify-content:center;"><x-flag code="brl" :size="52" /></span>
                 <h3 class="ks-currency-name">Real Brasileiro</h3>
                 <div class="ks-currency-code">BRL</div>
                 <p class="ks-currency-desc">Transferência PIX ou bancária do Brasil com chegada rápida.</p>
             </div>
-            <div class="ks-currency-card">
-                <span class="ks-currency-flag" role="img" aria-label="Stablecoin">₮</span>
+            <div class="ks-currency-card ks-reveal">
+                <span class="ks-currency-flag" style="display:flex;justify-content:center;"><x-flag code="usdc" :size="52" /></span>
                 <h3 class="ks-currency-name">USDT / USDC</h3>
                 <div class="ks-currency-code">TRC20 · BEP20 · ERC20</div>
                 <p class="ks-currency-desc">Stablecoins via blockchain. Entrega em minutos via rede TRON (TRC20).</p>
@@ -449,24 +318,24 @@
         <div class="ks-how-inner">
             <div style="text-align:center;">
                 <span class="ks-section-label">Processo Simples</span>
-                <h2 class="ks-section-title">Como funciona</h2>
+                <h2 class="ks-section-title ks-reveal">Como funciona</h2>
                 <p class="ks-section-sub" style="margin-left:auto;margin-right:auto;">
                     Três passos e o destinatário tem os Kwanzas na conta — sem burocracia, sem taxas surpresa.
                 </p>
             </div>
 
             <div class="ks-steps">
-                <div class="ks-step">
+                <div class="ks-step ks-reveal">
                     <div class="ks-step-number">1</div>
                     <h3 class="ks-step-title">Regista-te e verifica</h3>
                     <p class="ks-step-desc">Cria a tua conta, envia documento de identidade e comprova titularidade. Verificação em até 24 horas.</p>
                 </div>
-                <div class="ks-step">
+                <div class="ks-step ks-reveal">
                     <div class="ks-step-number">2</div>
                     <h3 class="ks-step-title">Envia a moeda</h3>
                     <p class="ks-step-desc">Simula na calculadora, regista a transação e envia EUR, BRL ou USDT para a conta que te indicamos.</p>
                 </div>
-                <div class="ks-step">
+                <div class="ks-step ks-reveal">
                     <div class="ks-step-number">3</div>
                     <h3 class="ks-step-title">Recebe AOA em Angola</h3>
                     <p class="ks-step-desc">Após validação do comprovativo, os Kwanzas são depositados no IBAN angolano registado por ti em até 4 horas úteis.</p>
@@ -479,35 +348,35 @@
     <section class="ks-section">
         <div style="text-align:center;">
             <span class="ks-section-label">Porquê KwanzaSafe</span>
-            <h2 class="ks-section-title">A tua segurança em primeiro lugar</h2>
+            <h2 class="ks-section-title ks-reveal">A tua segurança em primeiro lugar</h2>
             <p class="ks-section-sub" style="margin-left:auto;margin-right:auto;">
                 Construímos uma plataforma à altura das exigências internacionais — com processos robustos de verificação e proteção contra fraudes.
             </p>
         </div>
 
         <div class="ks-why">
-            <div class="ks-why-card">
+            <div class="ks-why-card ks-reveal">
                 <div class="ks-why-icon">
                     <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <h3 class="ks-why-title">Anti-Fraude AML</h3>
                 <p class="ks-why-desc">O nome na conta de origem tem de coincidir com o teu BI — nenhum pagamento de terceiros é aceite.</p>
             </div>
-            <div class="ks-why-card">
+            <div class="ks-why-card ks-reveal">
                 <div class="ks-why-icon">
                     <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <h3 class="ks-why-title">Rápido</h3>
                 <p class="ks-why-desc">Processamos em até 4 horas úteis. Transferências USDT chegam em minutos.</p>
             </div>
-            <div class="ks-why-card">
+            <div class="ks-why-card ks-reveal">
                 <div class="ks-why-icon">
                     <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <h3 class="ks-why-title">Transparente</h3>
                 <p class="ks-why-desc">A taxa que vês na calculadora é a taxa final. Sem comissões ocultas, sem letra pequena.</p>
             </div>
-            <div class="ks-why-card">
+            <div class="ks-why-card ks-reveal">
                 <div class="ks-why-icon">
                     <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
@@ -517,12 +386,88 @@
         </div>
     </section>
 
+    {{-- ============ ESTATÍSTICAS ============ --}}
+    <section class="ks-stats">
+        <div class="ks-stats-inner">
+            <div class="ks-stat ks-reveal">
+                <div class="ks-stat-num"><span data-count="18">0</span></div>
+                <div class="ks-stat-label">Províncias de Angola alcançadas</div>
+            </div>
+            <div class="ks-stat ks-reveal d1">
+                <div class="ks-stat-num"><span data-count="3">0</span></div>
+                <div class="ks-stat-label">Moedas + USDC (EUR · BRL · USDC)</div>
+            </div>
+            <div class="ks-stat ks-reveal d2">
+                <div class="ks-stat-num">&lt; 2h</div>
+                <div class="ks-stat-label">Tempo médio de envio</div>
+            </div>
+            <div class="ks-stat ks-reveal d3">
+                <div class="ks-stat-num">24/7</div>
+                <div class="ks-stat-label">Suporte humano por WhatsApp</div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ============ TESTEMUNHOS ============ --}}
+    <section class="ks-test" id="testemunhos">
+        <div class="ks-test-inner">
+            <div class="ks-test-head">
+                <span class="ks-section-label" style="color:var(--ks-green-dark); font-weight:700; font-size:0.78rem; letter-spacing:0.1em; text-transform:uppercase;">Histórias reais</span>
+                <h2 class="ks-section-title ks-reveal" style="margin-top:0.5rem;">Quem confia a sua família à KwanzaSafe</h2>
+            </div>
+
+            <div class="ks-tcar ks-reveal" x-data="ksTestimonials()" @mouseenter="stop()" @mouseleave="start()">
+                <div class="ks-tcar-viewport">
+                    <div class="ks-tcar-track" :style="`transform:translateX(-${i*100}%)`">
+                        @php
+                            $testimonials = [
+                                ['q' => 'Mandei euros de Lisboa para a minha mãe no Huambo e em menos de duas horas ela já tinha os kwanzas na conta. O atendimento por WhatsApp foi impecável.', 'n' => 'Edmilson Tavares', 'l' => 'Lisboa, Portugal · envia para o Huambo', 'in' => 'ET', 'c' => '#009d44'],
+                                ['q' => 'Desconfiava de tudo o que era online, mas a verificação séria e o recibo a cada passo deram-me confiança. Já é a terceira vez que uso, sempre sem problemas.', 'n' => 'Domingos Kiala', 'l' => 'Luanda, Angola', 'in' => 'DK', 'c' => '#2563eb'],
+                                ['q' => 'Envio para a minha irmã em Benguela todos os meses. A taxa aparece clara antes de eu confirmar, sem surpresas no fim. Recomendo a toda a gente da diáspora.', 'n' => 'Cláudia Bumba', 'l' => 'São Paulo, Brasil · envia para Benguela', 'in' => 'CB', 'c' => '#ea580c'],
+                                ['q' => 'Recebi o pagamento mesmo num domingo. E o melhor: falei com uma pessoa de verdade no WhatsApp, não com um robô. Isso para nós vale ouro.', 'n' => 'Nelson Quitumba', 'l' => 'Benguela, Angola', 'in' => 'NQ', 'c' => '#7c3aed'],
+                                ['q' => 'Uso USDC e nunca foi tão simples chegar a Angola. Tudo transparente, do primeiro clique até a confirmação. Mudou a forma como ajudo a minha família.', 'n' => 'Sandra Mendes', 'l' => 'Roterdão, Países Baixos', 'in' => 'SM', 'c' => '#0d9488'],
+                            ];
+                        @endphp
+                        @foreach($testimonials as $t)
+                        <div class="ks-tslide">
+                            <div class="ks-tcard">
+                                <div class="ks-tstars">★★★★★</div>
+                                <p class="ks-tquote">{{ $t['q'] }}”</p>
+                                <div class="ks-tperson">
+                                    <div class="ks-tavatar" style="background:{{ $t['c'] }};">{{ $t['in'] }}</div>
+                                    <div>
+                                        <div class="ks-tname">{{ $t['n'] }}</div>
+                                        <div class="ks-tloc">{{ $t['l'] }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="ks-tcar-controls">
+                    <button class="ks-tcar-arrow" @click="prev()" aria-label="Anterior">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="ks-tcar-dots">
+                        <template x-for="k in n" :key="k">
+                            <button class="ks-tdot" :class="{ active: i === k - 1 }" @click="go(k - 1)" :aria-label="`Testemunho ${k}`"></button>
+                        </template>
+                    </div>
+                    <button class="ks-tcar-arrow" @click="next()" aria-label="Seguinte">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
     {{-- ============ FAQ ============ --}}
     <section class="ks-section" id="faq" style="background: var(--ks-gray-50);">
         <div class="ks-faq-wrap">
             <div style="text-align:center; margin-bottom: 2.5rem;">
                 <span class="ks-section-label">Perguntas Frequentes</span>
-                <h2 class="ks-section-title">Tudo o que precisas saber</h2>
+                <h2 class="ks-section-title ks-reveal">Tudo o que precisas saber</h2>
             </div>
 
             <details class="ks-faq-item">
@@ -580,74 +525,9 @@
     </section>
 
     {{-- ============ FOOTER ============ --}}
-    <footer class="ks-footer">
-        <div class="ks-footer-inner">
-            <div class="ks-footer-grid">
-                <div>
-                    <div class="ks-footer-brand">
-                        <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe">
-                        <span class="ks-footer-brand-name">KwanzaSafe</span>
-                    </div>
-                    <p class="ks-footer-desc">
-                        Carteira internacional para remessas seguras do mundo para Angola. Conversão transparente de EUR, BRL e USDT em Kwanzas.
-                    </p>
-                    <a href="https://wa.me/5511933579009?text=Olá%2C+quero+saber+mais+sobre+o+KwanzaSafe." target="_blank" rel="noopener" class="ks-footer-wa">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                        +55 11 93357-9009
-                    </a>
-                </div>
 
-                <div>
-                    <h4>Plataforma</h4>
-                    <ul>
-                        <li><a href="#como-funciona">Como Funciona</a></li>
-                        <li><a href="#moedas">Moedas Aceites</a></li>
-                        <li><a href="#faq">FAQ</a></li>
-                        <li><a href="{{ route('register') }}">Criar Conta</a></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4>Suporte</h4>
-                    <ul>
-                        <li><a href="https://wa.me/5511933579009" target="_blank" rel="noopener">WhatsApp</a></li>
-                        <li><a href="mailto:suporte@kwanzasafe.com">Email</a></li>
-                        <li><a href="{{ route('login') }}">Área Cliente</a></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4>Legal</h4>
-                    <ul>
-                        <li><a href="{{ route('terms') }}">Termos de Uso</a></li>
-                        <li><a href="{{ route('privacy') }}">Política de Privacidade</a></li>
-                        <li><a href="#faq">Conformidade AML</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="ks-footer-bottom">
-                <div class="ks-footer-copy">
-                    © 2026 KWANZASAFE · BNA Compliant · All Rights Reserved
-                </div>
-                <div class="ks-footer-social">
-                    <a href="https://wa.me/5511933579009" target="_blank" rel="noopener" aria-label="WhatsApp">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    {{-- ============ WHATSAPP FLUTUANTE ============ --}}
-    <a href="https://wa.me/5511933579009?text=Olá%2C+preciso+de+ajuda+com+o+KwanzaSafe." target="_blank" rel="noopener" class="ks-wa-float" aria-label="Contactar via WhatsApp">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-        </svg>
-    </a>
-
-    <script>
-        // Calculadora em tempo real
+<x-slot:scripts>
+<script>
         function heroCalc() {
             return {
                 rates: @json($rates->pluck('rate', 'currency_from')),
@@ -672,7 +552,36 @@
                 },
             };
         }
-    </script>
 
-</body>
-</html>
+        function ksTestimonials() {
+            return {
+                i: 0,
+                n: 5,
+                timer: null,
+                init() { this.start(); },
+                start() { this.stop(); this.timer = setInterval(() => this.next(), 6000); },
+                stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+                next() { this.i = (this.i + 1) % this.n; },
+                prev() { this.i = (this.i - 1 + this.n) % this.n; },
+                go(k) { this.i = k; this.start(); },
+            };
+        }
+
+        // Carrossel do hero (5 banners, auto-avanço + pausa no hover)
+        function ksBanners() {
+            return {
+                i: 0,
+                n: 5,
+                timer: null,
+                init() { this.start(); },
+                start() { this.stop(); this.timer = setInterval(() => this.next(), 5000); },
+                stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+                next() { this.i = (this.i + 1) % this.n; },
+                prev() { this.i = (this.i - 1 + this.n) % this.n; },
+                go(k) { this.i = k; this.start(); },
+            };
+        }
+</script>
+</x-slot:scripts>
+
+</x-public-layout>

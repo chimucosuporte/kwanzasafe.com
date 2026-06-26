@@ -30,6 +30,7 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
     ];
 
     /**
@@ -50,7 +51,15 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'balance'             => 'decimal:2',
         'kyc_bot_analyzed_at' => 'datetime',
         'kyc_bot_notes'       => 'array',
+        'two_factor_secret'      => 'encrypted',
+        'two_factor_confirmed_at'=> 'datetime',
     ];
+
+    /** 2FA (TOTP) activo = segredo confirmado. */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return ! is_null($this->two_factor_confirmed_at);
+    }
 
     // ============================================================
     // KYC helpers
@@ -86,6 +95,16 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
     public function setNameAttribute($value): void
     {
         $this->attributes['full_name'] = $value;
+    }
+
+    /**
+     * Caminho da foto a EXIBIR como avatar: o avatar de perfil escolhido pelo
+     * utilizador (mobile) ou, em fallback, a selfie do KYC. Garante que web e
+     * app mostram a MESMA foto. (A revisão de KYC usa profile_photo_path direto.)
+     */
+    public function getDisplayPhotoPathAttribute(): ?string
+    {
+        return $this->avatar_path ?: $this->profile_photo_path;
     }
 
     // ============================================================

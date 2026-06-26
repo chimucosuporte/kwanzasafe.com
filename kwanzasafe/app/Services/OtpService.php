@@ -313,6 +313,204 @@ class OtpService
     }
 
     // ========================================================================
+    // PASSWORD RESET OTP (código por email para redefinir a palavra-passe)
+    // ========================================================================
+
+    /**
+     * Gera um OTP de recuperação de palavra-passe e envia por email.
+     */
+    public function sendPasswordResetOtp(User $user, ?string $ip = null): array
+    {
+        if (!$this->canRequestNewCode($user, 'password_reset')) {
+            return [
+                'success' => false,
+                'message' => 'Demasiados códigos solicitados. Aguarda 1 hora antes de tentar novamente.',
+                'code'    => 'rate_limited',
+            ];
+        }
+
+        $plainCode = $this->generateCode();
+        $this->invalidatePreviousCodes($user, 'password_reset');
+
+        $otp = OtpCode::create([
+            'user_id'     => $user->id,
+            'type'        => 'password_reset',
+            'destination' => $user->email,
+            'code_hash'   => Hash::make($plainCode),
+            'attempts'    => 0,
+            'expires_at'  => now()->addMinutes(self::EXPIRY_MINUTES),
+            'ip_address'  => $ip,
+        ]);
+
+        try {
+            Mail::to($user->email)->send(new OtpEmail($user, $plainCode, self::EXPIRY_MINUTES, 'password_reset'));
+
+            Log::info('Password reset OTP sent', ['user_id' => $user->id, 'otp_id' => $otp->id]);
+
+            return [
+                'success'            => true,
+                'message'            => 'Código enviado para ' . $this->maskEmail($user->email),
+                'expires_in_minutes' => self::EXPIRY_MINUTES,
+            ];
+        } catch (\Exception $e) {
+            $otp->delete();
+
+            Log::error('Failed to send password reset OTP', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'message' => 'Erro ao enviar email. Tenta novamente em alguns minutos.',
+                'code'    => 'send_failed',
+            ];
+        }
+    }
+
+    /**
+     * Valida o OTP de recuperação de palavra-passe.
+     * NÃO toca em email_verified_at — apenas autoriza a redefinição.
+     */
+    public function verifyPasswordResetOtp(User $user, string $submittedCode): array
+    {
+        $submittedCode = preg_replace('/[^0-9]/', '', $submittedCode);
+
+        if (strlen($submittedCode) !== self::CODE_LENGTH) {
+            return ['success' => false, 'message' => 'Código deve ter 6 dígitos.', 'code' => 'invalid_format'];
+        }
+
+        $otp = OtpCode::where('user_id', $user->id)
+                      ->where('type', 'password_reset')
+                      ->whereNull('verified_at')
+                      ->where('expires_at', '>', now())
+                      ->orderBy('created_at', 'desc')
+                      ->first();
+
+        if (!$otp) {
+            return ['success' => false, 'message' => 'Nenhum código válido encontrado. Solicita um novo código.', 'code' => 'no_active_code'];
+        }
+
+        if ($otp->attempts >= self::MAX_ATTEMPTS) {
+            return ['success' => false, 'message' => 'Demasiadas tentativas. Solicita um novo código.', 'code' => 'max_attempts'];
+        }
+
+        $otp->increment('attempts');
+
+        if (!Hash::check($submittedCode, $otp->code_hash)) {
+            $remaining = self::MAX_ATTEMPTS - $otp->attempts;
+            return [
+                'success'            => false,
+                'message'            => "Código incorreto. Restam {$remaining} tentativa(s).",
+                'code'               => 'invalid_code',
+                'attempts_remaining' => $remaining,
+            ];
+        }
+
+        $otp->markAsVerified();
+
+        return ['success' => true, 'message' => 'Código verificado.'];
+    }
+
+    // ========================================================================
+    // EMAIL CHANGE OTP (código ao email ATUAL e ao NOVO email)
+    // ========================================================================
+
+    /**
+     * Pede a alteração de email: envia um código ao email ATUAL (autoriza) e
+     * outro ao email NOVO (prova que é alcançável). Ambos serão exigidos.
+     */
+    public function sendEmailChangeOtp(User $user, string $newEmail, ?string $ip = null): array
+    {
+        if (! $this->canRequestNewCode($user, 'email_change_new')) {
+            return ['success' => false, 'message' => 'Demasiados pedidos. Aguarda 1 hora antes de tentar de novo.', 'code' => 'rate_limited'];
+        }
+
+        $codeCurrent = $this->generateCode();
+        $codeNew     = $this->generateCode();
+
+        $this->invalidatePreviousCodes($user, 'email_change_current');
+        $this->invalidatePreviousCodes($user, 'email_change_new');
+
+        OtpCode::create([
+            'user_id' => $user->id, 'type' => 'email_change_current', 'destination' => $user->email,
+            'code_hash' => Hash::make($codeCurrent), 'attempts' => 0,
+            'expires_at' => now()->addMinutes(self::EXPIRY_MINUTES), 'ip_address' => $ip,
+        ]);
+        OtpCode::create([
+            'user_id' => $user->id, 'type' => 'email_change_new', 'destination' => $newEmail,
+            'code_hash' => Hash::make($codeNew), 'attempts' => 0,
+            'expires_at' => now()->addMinutes(self::EXPIRY_MINUTES), 'ip_address' => $ip,
+        ]);
+
+        try {
+            Mail::raw(
+                "Pediste a alteração do teu email na KwanzaSafe para {$newEmail}.\n\n".
+                "Código para AUTORIZAR a alteração: {$codeCurrent}\n\n".
+                "Válido por ".self::EXPIRY_MINUTES." minutos. Se não foste tu, ignora este email e muda a tua palavra-passe.",
+                fn ($m) => $m->to($user->email)->subject('KwanzaSafe — autoriza a alteração do teu email')
+            );
+            Mail::raw(
+                "Para confirmares que este email é teu na KwanzaSafe, usa o código: {$codeNew}\n\n".
+                "Válido por ".self::EXPIRY_MINUTES." minutos.",
+                fn ($m) => $m->to($newEmail)->subject('KwanzaSafe — confirma o teu novo email')
+            );
+
+            return ['success' => true, 'message' => 'Enviámos um código ao teu email atual e ao novo email.'];
+        } catch (\Exception $e) {
+            Log::error('Failed to send email-change OTP', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'Erro ao enviar os códigos. Tenta novamente em alguns minutos.', 'code' => 'send_failed'];
+        }
+    }
+
+    /**
+     * Valida AMBOS os códigos em duas fases: só os consome se os dois estiverem
+     * correctos (caso contrário o utilizador pode tentar de novo sem repetir tudo).
+     */
+    public function verifyEmailChangeOtp(User $user, string $newEmail, string $codeCurrent, string $codeNew): array
+    {
+        $codeCurrent = preg_replace('/[^0-9]/', '', $codeCurrent);
+        $codeNew     = preg_replace('/[^0-9]/', '', $codeNew);
+
+        $otpCurrent = $this->activeOtp($user, 'email_change_current', $user->email);
+        $otpNew     = $this->activeOtp($user, 'email_change_new', $newEmail);
+
+        if (! $otpCurrent || ! $otpNew) {
+            return ['success' => false, 'message' => 'Pedido expirado. Pede novos códigos.', 'code' => 'expired'];
+        }
+        if ($otpCurrent->attempts >= self::MAX_ATTEMPTS || $otpNew->attempts >= self::MAX_ATTEMPTS) {
+            return ['success' => false, 'message' => 'Demasiadas tentativas. Pede novos códigos.', 'code' => 'max_attempts'];
+        }
+
+        $otpCurrent->increment('attempts');
+        $otpNew->increment('attempts');
+
+        $okCurrent = Hash::check($codeCurrent, $otpCurrent->code_hash);
+        $okNew     = Hash::check($codeNew, $otpNew->code_hash);
+
+        if (! $okCurrent) {
+            return ['success' => false, 'field' => 'code_current', 'message' => 'O código do email atual está incorreto.'];
+        }
+        if (! $okNew) {
+            return ['success' => false, 'field' => 'code_new', 'message' => 'O código do email novo está incorreto.'];
+        }
+
+        $otpCurrent->markAsVerified();
+        $otpNew->markAsVerified();
+
+        return ['success' => true];
+    }
+
+    /** OTP activo mais recente por tipo + destino. */
+    private function activeOtp(User $user, string $type, string $destination): ?OtpCode
+    {
+        return OtpCode::where('user_id', $user->id)
+            ->where('type', $type)
+            ->where('destination', $destination)
+            ->whereNull('verified_at')
+            ->where('expires_at', '>', now())
+            ->orderByDesc('created_at')
+            ->first();
+    }
+
+    // ========================================================================
     // HELPERS
     // ========================================================================
 

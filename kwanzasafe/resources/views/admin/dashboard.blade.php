@@ -43,7 +43,7 @@
     .ad-topbar__menu:hover { background:rgba(255,255,255,0.2); }
 
     .ad-topbar__brand { display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; }
-    .ad-topbar__logo { height:30px; filter:brightness(0) invert(1); }
+    .ad-topbar__logo { height:30px; }
     .ad-topbar__title-wrap { min-width:0; }
     .ad-topbar__title {
         font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem;
@@ -108,16 +108,21 @@
     }
     .ad-sidebar.is-open { transform:translateX(0); }
 
-    .ad-sidebar__logo {
-        padding:1.25rem 1.25rem 1rem;
+    .ad-sidebar__head {
+        padding:1.35rem 1.25rem 1.1rem;
         border-bottom:1px solid rgba(255,255,255,0.08);
-        display:flex; align-items:center; gap:0.625rem;
     }
-    .ad-sidebar__logo img { height:32px; filter:brightness(0) invert(1); }
-    .ad-sidebar__brand { font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; }
+    .ad-sidebar__logo { display:inline-flex; align-items:center; text-decoration:none; }
+    .ad-logo { width:auto; display:none; }
+    .ad-logo--full { height:42px; display:block; }
+    .ad-logo--icon { height:36px; }
+    @media (max-width:640px) {
+        .ad-logo--full { display:none; }
+        .ad-logo--icon { display:block; }
+    }
     .ad-sidebar__sub {
-        font-size:0.55rem; font-weight:700; letter-spacing:0.15em;
-        text-transform:uppercase; color:#009d44; margin-top:-2px;
+        font-size:0.55rem; font-weight:700; letter-spacing:0.16em;
+        text-transform:uppercase; color:rgba(255,255,255,0.42); margin-top:0.6rem;
     }
 
     .ad-sidebar__user {
@@ -679,7 +684,7 @@
             </svg>
         </button>
         <div class="ad-topbar__brand">
-            <img src="{{ asset('assets/images/logos/logo.png') }}" alt="KwanzaSafe" class="ad-topbar__logo">
+            <img src="{{ asset('assets/images/logos/logo-icone.png') }}" alt="KwanzaSafe" class="ad-topbar__logo">
             <div class="ad-topbar__title-wrap">
                 <div class="ad-topbar__title">{{ $greeting }}, {{ $firstName }}</div>
                 <div class="ad-topbar__sub" x-text="`Atualizado às ${lastUpdate}`"></div>
@@ -714,18 +719,18 @@
 
     {{-- ============ SIDEBAR ============ --}}
     <aside class="ad-sidebar" :class="{'is-open': sidebarOpen}">
-        <div class="ad-sidebar__logo">
-            <img src="{{ asset('assets/images/logos/logo1.png') }}" alt="KwanzaSafe">
-            <div>
-                <div class="ad-sidebar__brand">KwanzaSafe</div>
-                <div class="ad-sidebar__sub">Admin</div>
-            </div>
+        <div class="ad-sidebar__head">
+            <a href="{{ url('/') }}" class="ad-sidebar__logo" aria-label="KwanzaSafe — início">
+                <img src="{{ asset('assets/images/logos/logo-icone.png') }}" alt="KwanzaSafe" class="ad-logo ad-logo--icon">
+                <img src="{{ asset('assets/images/logos/logo-isotipo-white.png') }}" alt="KwanzaSafe" class="ad-logo ad-logo--full">
+            </a>
+            <div class="ad-sidebar__sub">Centro de Comando</div>
         </div>
 
         <div class="ad-sidebar__user">
             <div class="ad-sidebar__avatar">
-                @if(ks_file($user->profile_photo_path))
-                    <img src="{{ ks_file($user->profile_photo_path) }}" alt="">
+                @if(ks_file($user->display_photo_path))
+                    <img loading="lazy" decoding="async" src="{{ ks_file($user->display_photo_path) }}" alt="">
                 @else
                     {{ strtoupper(substr($firstName, 0, 1)) }}
                 @endif
@@ -887,7 +892,23 @@
                 </div>
                 <div class="ad-stat__label">Volume {{ $period === 'today' ? 'Hoje' : ($period === 'week' ? '7d' : 'Total') }}</div>
                 <div class="ad-stat__value ad-font-display" style="font-size:1.1rem;" x-text="`${formatNum(stats.volume_aoa)} Kz`" :class="{'flash-up': flashing.volume_aoa}">{{ number_format($stats['volume_aoa'], 0, ',', '.') }} Kz</div>
-                <div class="ad-stat__sub">Em AOA</div>
+                @php
+                    $sparkVals = array_column($chartData, 'volume');
+                    $sparkMax  = max($sparkVals) ?: 1;
+                    $sparkN    = max(count($sparkVals), 1);
+                    $sparkPts  = '';
+                    foreach ($sparkVals as $i => $v) {
+                        $sx = $sparkN > 1 ? round(($i / ($sparkN - 1)) * 100, 1) : 0;
+                        $sy = round(26 - ($v / $sparkMax) * 22, 1);
+                        $sparkPts .= "{$sx},{$sy} ";
+                    }
+                @endphp
+                <div class="ad-stat__sub" style="display:flex;align-items:center;gap:0.4rem;">
+                    <svg viewBox="0 0 100 28" preserveAspectRatio="none" style="width:54px;height:18px;flex-shrink:0;">
+                        <polyline points="{{ trim($sparkPts) }}" fill="none" stroke="#009d44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+                    </svg>
+                    <span>7 dias · AOA</span>
+                </div>
             </a>
 
             <a href="{{ route('admin.messages.unread') }}" class="ad-stat s-chat" style="grid-column: 1 / -1;">
@@ -935,6 +956,45 @@
                 @foreach($chartData as $day)
                     <div class="ad-chart__label">{{ $day['label'] }}</div>
                 @endforeach
+            </div>
+        </div>
+
+        {{-- ============ TRANSAÇÕES POR ESTADO (donut) ============ --}}
+        @push('head')
+        <style>
+            .ad-donut-wrap { display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap; justify-content:center; padding:0.5rem 0; }
+            .ad-donut { width:150px; height:150px; border-radius:50%; flex-shrink:0; position:relative; transition:background 0.6s ease; }
+            .ad-donut__hole { position:absolute; inset:24px; background:#fff; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+            .ad-donut__num { font-size:1.5rem; font-weight:800; color:#0f172a; line-height:1; }
+            .ad-donut__lbl { font-size:0.6rem; color:#737373; text-transform:uppercase; letter-spacing:0.1em; margin-top:2px; }
+            .ad-donut__legend { display:flex; flex-direction:column; gap:0.6rem; min-width:200px; flex:1; }
+            .ad-donut__item { display:flex; align-items:center; gap:0.6rem; font-size:0.85rem; color:#404040; }
+            .ad-donut__dot { width:12px; height:12px; border-radius:4px; flex-shrink:0; }
+            .ad-donut__name { flex:1; }
+            .ad-donut__item b { font-family:'Syne',sans-serif; font-weight:800; color:#0f172a; }
+            .ad-donut__item i { font-style:normal; font-size:0.7rem; color:#737373; min-width:36px; text-align:right; }
+        </style>
+        @endpush
+        <div class="ad-chart" style="margin-bottom:1rem;">
+            <div class="ad-chart__head">
+                <div>
+                    <div class="ad-chart__title ad-font-display">Transações por Estado</div>
+                    <div class="ad-chart__sub" x-text="stats.period_label">{{ $stats['period_label'] }}</div>
+                </div>
+            </div>
+            <div x-show="statusTotal === 0" x-cloak style="text-align:center;color:#a3a3a3;font-size:0.8rem;padding:1.5rem 0;">Sem transações neste período.</div>
+            <div class="ad-donut-wrap" x-show="statusTotal > 0" x-cloak>
+                <div class="ad-donut" :style="`background:${donutGradient}`">
+                    <div class="ad-donut__hole">
+                        <div class="ad-donut__num ad-font-display" x-text="formatNum(statusTotal)"></div>
+                        <div class="ad-donut__lbl">total</div>
+                    </div>
+                </div>
+                <div class="ad-donut__legend">
+                    <div class="ad-donut__item"><span class="ad-donut__dot" style="background:#009d44;"></span><span class="ad-donut__name">Concluídas</span><b x-text="formatNum(stats.tx_completed)"></b><i x-text="statusPct('tx_completed')+'%'"></i></div>
+                    <div class="ad-donut__item"><span class="ad-donut__dot" style="background:#f59e0b;"></span><span class="ad-donut__name">Em curso</span><b x-text="formatNum(stats.tx_pending)"></b><i x-text="statusPct('tx_pending')+'%'"></i></div>
+                    <div class="ad-donut__item"><span class="ad-donut__dot" style="background:#dc2626;"></span><span class="ad-donut__name">Canceladas</span><b x-text="formatNum(stats.tx_cancelled)"></b><i x-text="statusPct('tx_cancelled')+'%'"></i></div>
+                </div>
             </div>
         </div>
 
@@ -1018,8 +1078,8 @@
                         @foreach($pendingKycUsers as $u)
                             <a href="{{ route('admin.kyc.show', $u->id) }}" class="ad-kyc-row">
                                 <div class="ad-kyc-row__avatar">
-                                    @if(ks_file($u->profile_photo_path))
-                                        <img src="{{ ks_file($u->profile_photo_path) }}" alt="">
+                                    @if(ks_file($u->display_photo_path))
+                                        <img loading="lazy" decoding="async" src="{{ ks_file($u->display_photo_path) }}" alt="">
                                     @else
                                         {{ strtoupper(substr($u->full_name ?? $u->email, 0, 1)) }}
                                     @endif
@@ -1203,6 +1263,26 @@ function adminDashboard() {
         get chartTotal() {
             const total = @json(array_sum(array_column($chartData, 'volume')));
             return total.toLocaleString('pt-PT', { maximumFractionDigits: 0 });
+        },
+
+        // ----- Donut "Transações por Estado" (ao vivo) -----
+        get statusTotal() {
+            return (Number(this.stats.tx_completed) || 0)
+                 + (Number(this.stats.tx_pending) || 0)
+                 + (Number(this.stats.tx_cancelled) || 0);
+        },
+
+        get donutGradient() {
+            const t = this.statusTotal || 1;
+            const c = (Number(this.stats.tx_completed) || 0) / t * 100;
+            const p = c + (Number(this.stats.tx_pending) || 0) / t * 100;
+            return `conic-gradient(#009d44 0% ${c}%, #f59e0b ${c}% ${p}%, #dc2626 ${p}% 100%)`;
+        },
+
+        statusPct(field) {
+            const t = this.statusTotal;
+            if (!t) return 0;
+            return Math.round((Number(this.stats[field]) || 0) / t * 100);
         }
     };
 }
