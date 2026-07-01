@@ -113,6 +113,9 @@ Route::middleware('auth')->group(function () {
     // Definições (hub central)
     Route::get('/settings', fn() => view('settings'))->name('settings');
 
+    // Convidar amigos
+    Route::get('/convidar', fn() => view('invite'))->name('invite');
+
     // Central de notificações
     Route::get('/notifications',              [NotificationController::class, 'index'])      ->name('notifications.index');
     Route::post('/notifications/read-all',    [NotificationController::class, 'markAllRead'])->name('notifications.read_all');

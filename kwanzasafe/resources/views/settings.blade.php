@@ -138,6 +138,16 @@
                 </span>
                 {!! $chev !!}
             </a>
+            <a href="{{ route('invite') }}" class="st-row">
+                <span class="st-row__icon">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <span class="st-row__body">
+                    <span class="st-row__label">Convidar amigos</span>
+                    <span class="st-row__desc">Partilha a KwanzaSafe com quem envia para Angola.</span>
+                </span>
+                {!! $chev !!}
+            </a>
             <div class="st-row" style="cursor:default;">
                 <span class="st-row__icon neutral">
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18" stroke-linecap="round"/></svg>
