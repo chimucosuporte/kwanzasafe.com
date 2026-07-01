@@ -120,7 +120,7 @@
     .dc-sidebar {
         position:fixed; top:0; left:0; bottom:0;
         width:260px;
-        background:linear-gradient(180deg,#000 0%,#0a0a0a 100%);
+        background:#0a0a0a;
         color:white;
         z-index:50;
         display:flex; flex-direction:column;
@@ -244,20 +244,12 @@
 
     /* ============ HERO (HOME) ============ */
     .dc-hero {
-        background:linear-gradient(135deg,#009d44 0%,#007a34 100%);
-        border-radius:20px;
+        background:#009d44;
+        border-radius:16px;
         padding:1.5rem;
         color:white;
         margin-bottom:1.25rem;
         position:relative;
-        overflow:hidden;
-    }
-    .dc-hero::before {
-        content:''; position:absolute;
-        top:-40px; right:-40px;
-        width:160px; height:160px;
-        background:rgba(255,255,255,0.08);
-        border-radius:50%;
     }
     .dc-hero__greeting { font-size:0.85rem; opacity:0.9; font-weight:500; }
     .dc-hero__name {
@@ -272,34 +264,32 @@
 
     /* ============ KYC STATUS BANNER ============ */
     .dc-kyc-banner {
-        border-radius:14px;
+        border-radius:12px;
         padding:1rem 1.125rem;
         margin-bottom:1rem;
         display:flex; align-items:center; gap:0.75rem;
         text-decoration:none; color:inherit;
-        transition:transform 0.15s;
+        background:#fff; border:1px solid #e5e5e5;
     }
-    .dc-kyc-banner:hover { transform:translateX(2px); }
-    .dc-kyc-banner.warn { background:linear-gradient(135deg,#fef3c7,#fde68a); border:1px solid #f59e0b; }
-    .dc-kyc-banner.success { background:linear-gradient(135deg,#d1f2e0,#a7f3d0); border:1px solid #009d44; }
-    .dc-kyc-banner.danger { background:linear-gradient(135deg,#fee2e2,#fca5a5); border:1px solid #dc2626; }
+    .dc-kyc-banner.warn { background:#fffbeb; border-color:#fde68a; }
+    .dc-kyc-banner.success { background:#f0faf4; border-color:#a7f3d0; }
+    .dc-kyc-banner.danger { background:#fef2f2; border-color:#fca5a5; }
     .dc-kyc-banner__icon {
-        width:42px; height:42px; border-radius:10px;
+        width:40px; height:40px; border-radius:10px;
         display:flex; align-items:center; justify-content:center;
         flex-shrink:0; color:white;
     }
     .dc-kyc-banner.warn .dc-kyc-banner__icon { background:#f59e0b; }
     .dc-kyc-banner.success .dc-kyc-banner__icon { background:#009d44; }
     .dc-kyc-banner.danger .dc-kyc-banner__icon { background:#dc2626; }
-    .dc-kyc-banner__title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.875rem; }
+    .dc-kyc-banner__title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.875rem; }
     .dc-kyc-banner__sub { font-size:0.75rem; margin-top:1px; opacity:0.85; }
     .dc-kyc-banner__cta {
         background:#000; color:white;
-        padding:0.5rem 0.875rem;
+        padding:0.45rem 0.8rem;
         border-radius:8px;
-        font-family:'Syne',sans-serif;
-        font-size:0.7rem; font-weight:800;
-        text-transform:uppercase; letter-spacing:0.05em;
+        font-family:'DM Sans',sans-serif;
+        font-size:0.75rem; font-weight:600;
         flex-shrink:0;
     }
 
@@ -556,17 +546,11 @@
 
     /* ============ PROFILE ============ */
     .dc-profile-hero {
-        background:linear-gradient(135deg,#000 0%,#171717 100%);
-        border-radius:18px; padding:1.5rem;
+        background:#111111;
+        border-radius:16px; padding:1.5rem;
         color:white; text-align:center;
         margin-bottom:1rem;
-        position:relative; overflow:hidden;
-    }
-    .dc-profile-hero::before {
-        content:''; position:absolute;
-        top:-30px; right:-30px;
-        width:140px; height:140px;
-        background:radial-gradient(circle,rgba(0,157,68,0.2),transparent);
+        position:relative;
     }
     .dc-profile-hero__avatar {
         width:80px; height:80px; border-radius:50%;
@@ -770,7 +754,7 @@
             {{-- HERO com saudação --}}
             <div class="dc-hero">
                 <div class="dc-hero__greeting">{{ $greeting }},</div>
-                <div class="dc-hero__name">{{ $firstName }} 👋</div>
+                <div class="dc-hero__name">{{ $firstName }}</div>
                 <div class="dc-hero__sub">
                     @if($kycStatus['approved'])
                         Conta verificada. Pronta para câmbio internacional.
@@ -782,8 +766,7 @@
 
             {{-- ============ CONTINUAR NA APP (Android) ============ --}}
             @php $hasApk = file_exists(base_path('../public_html/downloads/kwanzasafe.apk')); @endphp
-            <div style="background:linear-gradient(135deg,#0a0d0b 0%,#0d3a20 100%);border-radius:18px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;position:relative;overflow:hidden;">
-                <div style="position:absolute;top:-40px;right:-30px;width:160px;height:160px;background:rgba(0,180,84,.12);border-radius:50%;"></div>
+            <div style="background:#111111;border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;position:relative;">
                 <div style="width:52px;height:52px;border-radius:14px;background:rgba(0,180,84,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;">
                     <svg width="26" height="26" fill="none" stroke="#1be37a" stroke-width="2" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><line x1="11" y1="18" x2="13" y2="18" stroke-linecap="round"/></svg>
                 </div>
@@ -852,7 +835,7 @@
                     .dc-fx { display:flex; flex-direction:column; gap:0.7rem; }
                     .dc-fxblock { background:#f6f7f9; border:1.5px solid #ebedf0; border-radius:14px; padding:0.85rem 1rem; transition:border-color .15s, background .15s; }
                     .dc-fxblock:focus-within { border-color:#009d44; background:#fff; }
-                    .dc-fxblock--recv { background:linear-gradient(135deg,#f1faf4,#e6f7ec); border-color:#bce6cd; }
+                    .dc-fxblock--recv { background:#f0faf4; border-color:#bce6cd; }
                     .dc-fxlabel { font-family:'DM Sans',sans-serif; font-size:0.62rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#8a9099; margin-bottom:0.55rem; }
                     .dc-fxblock--recv .dc-fxlabel { color:#018a3b; }
                     .dc-fxrow { display:flex; align-items:center; gap:0.75rem; }
@@ -885,9 +868,9 @@
                     .dc-ctabody { flex:1; min-width:0; }
                     .dc-ctatt { display:block; font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem; color:#0f172a; }
                     .dc-ctasub { display:block; font-family:'DM Sans',sans-serif; font-size:0.7rem; color:#5b6470; margin-top:2px; line-height:1.35; }
-                    .dc-go { width:100%; background:linear-gradient(135deg,#00ad4b,#007a34); color:#fff; border:none; padding:1rem; border-radius:14px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; box-shadow:0 6px 18px rgba(0,157,68,0.28); transition:transform .15s, box-shadow .15s, opacity .15s; }
-                    .dc-go:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 10px 24px rgba(0,157,68,0.36); }
-                    .dc-go:disabled { opacity:0.45; cursor:not-allowed; box-shadow:none; }
+                    .dc-go { width:100%; background:#009d44; color:#fff; border:none; padding:0.9rem; border-radius:12px; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.925rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:background .15s, opacity .15s; }
+                    .dc-go:hover:not(:disabled) { background:#007a34; }
+                    .dc-go:disabled { opacity:0.45; cursor:not-allowed; }
                     .dc-err { font-family:'DM Sans',sans-serif; font-size:0.72rem; color:#dc2626; font-weight:600; text-align:center; }
                     .dc-foot { font-family:'DM Sans',sans-serif; font-size:0.66rem; color:#a0a6ae; text-align:center; line-height:1.5; }
                     @media (max-width:360px){ .dc-amount, .dc-recv { font-size:1.4rem; } }
@@ -898,7 +881,7 @@
                     {{-- Header da calculadora --}}
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; gap:0.5rem;">
                         <div>
-                            <div class="dc-section__title">💱 Iniciar Câmbio</div>
+                            <div class="dc-section__title">Iniciar Câmbio</div>
                             <div style="font-size:0.7rem; color:#737373; margin-top:1px;">
                                 Calcula e inicia a tua transação diretamente
                             </div>
@@ -1135,7 +1118,7 @@
                     <div style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:#064e3b;">{{ $completedCount }}</div>
                     <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-top:2px;">Concluídas</div>
                 </div>
-                <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #a7f3d0;border-radius:12px;padding:0.875rem;text-align:center;">
+                <div style="background:#f0faf4;border:1px solid #a7f3d0;border-radius:12px;padding:0.875rem;text-align:center;">
                     <div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;color:#064e3b;line-height:1.1;">{{ number_format($totalKzReceived, 0, ',', '.') }}</div>
                     <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#059669;margin-top:2px;">Kz Recebidos</div>
                 </div>
@@ -1259,7 +1242,7 @@
             </a>
 
             <div style="background:#f0faf4; border:1px solid #a7f3d0; border-radius:14px; padding:1rem 1.125rem; margin-top:1rem;">
-                <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem; color:#007a34;">⏱️ Horário de Atendimento</div>
+                <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:0.85rem; color:#007a34;">Horário de Atendimento</div>
                 <div style="font-size:0.8rem; color:#525252; margin-top:6px; line-height:1.5;">
                     <strong>Dias úteis:</strong> 9h-18h (Luanda)<br>
                     <strong>Sábados:</strong> 9h-13h (Luanda)<br>
@@ -1292,14 +1275,14 @@
 
             @if(!$kycStatus['approved'])
                 <a href="{{ route('profile.edit') }}#kyc" class="dc-profile-row">
-                    <span class="dc-profile-row__label">⏳ Completar Verificação KYC</span>
+                    <span class="dc-profile-row__label">Completar Verificação KYC</span>
                     <svg class="dc-profile-row__icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </a>
             @endif
 
             @if($user->is_admin)
                 <a href="{{ route('admin.dashboard') }}" class="dc-profile-row">
-                    <span class="dc-profile-row__label">🛡️ Painel Admin</span>
+                    <span class="dc-profile-row__label">Painel Admin</span>
                     <svg class="dc-profile-row__icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </a>
             @endif

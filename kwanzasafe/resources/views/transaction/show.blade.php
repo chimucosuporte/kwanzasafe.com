@@ -59,9 +59,8 @@
 .tr-status-icon.completed        { background:#ecfdf5; color:#064e3b; }
 .tr-status-icon.cancelled        { background:#fee2e2; color:#dc2626; }
 .tr-status-icon.expired          { background:#f5f5f5; color:#737373; }
-.tr-confirm-btn { width:100%; background:linear-gradient(135deg,#009d44,#007a34); color:white; border:none; padding:1.125rem; border-radius:14px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.625rem; transition:all 0.2s; box-shadow:0 6px 20px rgba(0,157,68,0.3); }
-.tr-confirm-btn:hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,157,68,0.4); }
-.tr-confirm-btn:active { transform:translateY(0); }
+.tr-confirm-btn { width:100%; background:#009d44; color:white; border:none; padding:1rem; border-radius:12px; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.625rem; transition:background 0.15s; }
+.tr-confirm-btn:hover { background:#007a34; }
 .tr-sys-msg { text-align:center; padding:0.5rem 1rem; margin:0.5rem auto; max-width:80%; }
 .tr-sys-msg__text { display:inline-block; background:#f0fdf4; border:1px solid rgba(0,157,68,0.15); color:#065f46; font-size:0.75rem; font-weight:600; padding:0.375rem 0.875rem; border-radius:999px; line-height:1.4; }
 .tr-status-label { font-size:0.625rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8; }
@@ -71,8 +70,8 @@
 .tr-card__title { font-family:'Syne',sans-serif; font-size:0.875rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem; }
 .tr-amounts { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
 .tr-amount-box { border-radius:14px; padding:1.25rem; }
-.tr-amount-box.sent { background:#f8fafc; border:2px solid #e2e8f0; }
-.tr-amount-box.receive { background:linear-gradient(135deg,#ecfdf5,#d1fae5); border:2px solid #a7f3d0; }
+.tr-amount-box.sent { background:#fafafa; border:1px solid #e5e5e5; }
+.tr-amount-box.receive { background:#f0faf4; border:1px solid #a7f3d0; }
 .tr-amount-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8; margin-bottom:0.375rem; }
 .tr-amount-box.receive .tr-amount-label { color:#065f46; }
 .tr-amount-value { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; color:#0f172a; }
@@ -82,9 +81,9 @@
 .tr-upload-zone { border:2px dashed #e2e8f0; border-radius:14px; padding:2rem; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; }
 .tr-upload-zone:hover { border-color:#064e3b; background:#f0fdf4; }
 .tr-upload-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
-.tr-upload-btn { margin-top:1rem; width:100%; padding:1rem; background:#064e3b; color:white; border:none; border-radius:14px; font-family:'Syne',sans-serif; font-weight:800; font-size:0.875rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
-.tr-upload-btn:hover { background:#065f46; }
-.tr-bank-info { background:linear-gradient(135deg,#064e3b,#047857); border-radius:14px; padding:1.5rem; color:white; }
+.tr-upload-btn { margin-top:1rem; width:100%; padding:0.9rem; background:#111111; color:white; border:none; border-radius:12px; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.9rem; cursor:pointer; transition:background 0.15s; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
+.tr-upload-btn:hover { background:#000; }
+.tr-bank-info { background:#111111; border-radius:12px; padding:1.5rem; color:white; }
 .tr-bank-info__label { font-size:0.625rem; font-weight:700; text-transform:uppercase; letter-spacing:0.15em; opacity:0.6; margin-bottom:0.25rem; }
 .tr-bank-info__value { font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; margin-bottom:0.875rem; }
 .tr-bank-info__value:last-child { margin-bottom:0; }
@@ -98,7 +97,7 @@
 /* ===== CHAT ===== */
 .tr-chat-wrap { background:white; border-radius:1.5rem; border:1px solid #e2e8f0; box-shadow:0 4px 24px rgba(6,78,59,0.06); overflow:hidden; margin-bottom:1.25rem; }
 .tr-chat-header { padding:1rem 1.5rem; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:0.75rem; background:#f8fafc; }
-.tr-chat-header__avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#064e3b,#059669); color:white; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:800; font-size:0.875rem; }
+.tr-chat-header__avatar { width:36px; height:36px; border-radius:50%; background:#009d44; color:white; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:700; font-size:0.875rem; }
 .tr-chat-header__name  { font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:800; color:#0f172a; }
 .tr-chat-header__sub   { font-size:0.7rem; color:#10b981; font-weight:600; display:flex; align-items:center; gap:0.375rem; }
 .tr-chat-header__sub::before { content:''; width:6px; height:6px; background:#10b981; border-radius:50%; display:inline-block; }

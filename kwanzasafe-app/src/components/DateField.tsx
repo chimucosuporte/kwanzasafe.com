@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, fontSize, radius, spacing } from '@/theme';
 
@@ -30,6 +29,9 @@ function pad(n: number): string {
 
 /**
  * Campo de data em 3 seletores (ano/mês/dia) que funcionam em conjunto.
+ * O seletor é INLINE (painel expansível), sem `Modal` nativo — evita o
+ * conflito conhecido entre o Modal do RN e o KeyboardProvider/react-native-screens
+ * no Android (que fazia os toques não responderem / o campo "congelar").
  * Os dias disponíveis dependem do mês/ano escolhidos (abril → 30, fev → 28/29).
  * Emite uma data completa AAAA-MM-DD via onChange (ou '' se incompleta).
  */
@@ -50,7 +52,6 @@ export function DateField({
   maxYear: number;
   yearOrder?: 'asc' | 'desc';
 }) {
-  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState<Part | null>(null);
   const { y, m, d } = parse(value);
 
@@ -59,6 +60,8 @@ export function DateField({
   if (yearOrder === 'desc') years.reverse();
 
   const maxDay = daysInMonth(y, m);
+
+  const toggle = (part: Part) => setOpen((cur) => (cur === part ? null : part));
 
   const setPart = (part: Part, val: number) => {
     let ny = y, nm = m, nd = d;
@@ -84,43 +87,36 @@ export function DateField({
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.row}>
-        <Selector flex={1.1} placeholder="Ano" value={y ? String(y) : ''} onPress={() => setOpen('y')} error={!!error} />
-        <Selector flex={1.4} placeholder="Mês" value={m ? MONTHS[m - 1] : ''} onPress={() => setOpen('m')} error={!!error} />
-        <Selector flex={0.9} placeholder="Dia" value={d ? String(d) : ''} onPress={() => setOpen('d')} error={!!error} />
+        <Selector flex={1.1} placeholder="Ano" value={y ? String(y) : ''} active={open === 'y'} onPress={() => toggle('y')} error={!!error} />
+        <Selector flex={1.4} placeholder="Mês" value={m ? MONTHS[m - 1] : ''} active={open === 'm'} onPress={() => toggle('m')} error={!!error} />
+        <Selector flex={0.9} placeholder="Dia" value={d ? String(d) : ''} active={open === 'd'} onPress={() => toggle('d')} error={!!error} />
       </View>
       {!!error && <Text style={styles.error}>{error}</Text>}
 
-      <Modal visible={open !== null} transparent animationType="slide" onRequestClose={() => setOpen(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(null)} />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}>
-          <View style={styles.sheetHead}>
-            <Text style={styles.sheetTitle}>
-              {open === 'y' ? 'Ano' : open === 'm' ? 'Mês' : 'Dia'}
-            </Text>
-            <Pressable onPress={() => setOpen(null)} hitSlop={10}>
-              <Ionicons name="close" size={22} color={colors.textMuted} />
-            </Pressable>
-          </View>
-          <FlatList
-            data={options}
-            keyExtractor={(o) => String(o.v)}
-            initialNumToRender={20}
+      {open !== null && (
+        <View style={styles.panel}>
+          <ScrollView
             style={styles.list}
-            renderItem={({ item }) => {
-              const active = item.v === selectedValue;
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {options.map((item) => {
+              const isActive = item.v === selectedValue;
               return (
                 <Pressable
-                  style={[styles.option, active && styles.optionActive]}
-                  onPress={() => open && setPart(open, item.v)}
+                  key={item.v}
+                  style={[styles.option, isActive && styles.optionActive]}
+                  onPress={() => setPart(open, item.v)}
                 >
-                  <Text style={[styles.optionText, active && styles.optionTextActive]}>{item.label}</Text>
-                  {active && <Ionicons name="checkmark" size={18} color={colors.primaryBright} />}
+                  <Text style={[styles.optionText, isActive && styles.optionTextActive]}>{item.label}</Text>
+                  {isActive && <Ionicons name="checkmark" size={18} color={colors.primaryBright} />}
                 </Pressable>
               );
-            }}
-          />
+            })}
+          </ScrollView>
         </View>
-      </Modal>
+      )}
     </View>
   );
 }
@@ -130,20 +126,22 @@ function Selector({
   value,
   onPress,
   error,
+  active,
   flex,
 }: {
   placeholder: string;
   value: string;
   onPress: () => void;
   error?: boolean;
+  active?: boolean;
   flex: number;
 }) {
   return (
-    <Pressable style={[styles.selector, { flex }, error && styles.selectorError]} onPress={onPress}>
+    <Pressable style={[styles.selector, { flex }, active && styles.selectorActive, error && styles.selectorError]} onPress={onPress}>
       <Text style={[styles.selectorText, !value && styles.selectorPlaceholder]} numberOfLines={1}>
         {value || placeholder}
       </Text>
-      <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+      <Ionicons name={active ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
     </Pressable>
   );
 }
@@ -164,41 +162,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     paddingHorizontal: spacing.md,
   },
+  selectorActive: { borderColor: colors.primary },
   selectorError: { borderColor: colors.danger },
   selectorText: { flex: 1, fontFamily: fonts.body, fontSize: fontSize.md, color: colors.text },
   selectorPlaceholder: { color: colors.textMuted },
   error: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.danger },
 
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.overlay },
-  sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    maxHeight: '70%',
+  panel: {
+    marginTop: spacing.xs,
     backgroundColor: colors.card,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingTop: spacing.md,
+    overflow: 'hidden',
   },
-  sheetHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  sheetTitle: { fontFamily: fonts.displaySemi, fontSize: fontSize.lg, color: colors.text },
-  list: { paddingHorizontal: spacing.md },
+  list: { maxHeight: 240 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
   },
   optionActive: { backgroundColor: colors.primaryTint },
   optionText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.md, color: colors.text },
