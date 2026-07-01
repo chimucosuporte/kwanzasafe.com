@@ -291,6 +291,14 @@
     .dc-balance__chip.ok { background:#f0faf4; color:#007a34; }
     .dc-balance__chip.pending { background:#fffbeb; color:#b45309; }
 
+    /* ============ PESQUISA (histórico) ============ */
+    .dc-search { display:flex; align-items:center; gap:0.5rem; background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:0 0.875rem; height:44px; margin-bottom:0.75rem; }
+    .dc-search:focus-within { border-color:#009d44; box-shadow:0 0 0 3px rgba(0,157,68,0.1); }
+    .dc-search input { flex:1; border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.9rem; color:#0a0d0b; height:100%; }
+    .dc-search input::placeholder { color:#a3a3a3; }
+    .dc-search__clear { background:none; border:none; cursor:pointer; color:#a3a3a3; padding:2px; display:flex; align-items:center; }
+    .dc-search__clear:hover { color:#404040; }
+
     /* ============ KYC STATUS BANNER ============ */
     .dc-kyc-banner {
         border-radius:12px;
@@ -1192,6 +1200,15 @@
                 </div>
             </div>
 
+            {{-- Pesquisa --}}
+            <div class="dc-search">
+                <svg width="18" height="18" fill="none" stroke="#a3a3a3" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+                <input type="text" x-model="search" placeholder="Procurar por referência, moeda, estado ou valor…">
+                <button type="button" class="dc-search__clear" x-show="search" x-cloak @click="search = ''" aria-label="Limpar pesquisa">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+
             <div class="dc-filter-pills">
                 <template x-for="f in filters" :key="f.key">
                     <button type="button" class="dc-pill" :class="{'is-active': filter === f.key}" @click="filter = f.key" x-text="f.label"></button>
@@ -1613,6 +1630,7 @@ function clientDashboard() {
 
         // Filtros
         filter: window.ksPersist ? window.ksPersist.loadState('client_filter', 'all') : 'all',
+        search: '',
         filters: [
             {key: 'all',       label: 'Todas'},
             {key: 'completed', label: 'Concluídas'},
@@ -1667,14 +1685,26 @@ function clientDashboard() {
         },
 
         get filteredTransactions() {
-            if (this.filter === 'all') return this.transactions;
+            let list = this.transactions;
             if (this.filter === 'cancelled') {
-                return this.transactions.filter(tx => ['cancelled','expired'].includes(tx.status));
+                list = list.filter(tx => ['cancelled','expired'].includes(tx.status));
+            } else if (this.filter === 'pending') {
+                list = list.filter(tx => !['completed','cancelled','expired'].includes(tx.status));
+            } else if (this.filter !== 'all') {
+                list = list.filter(tx => tx.status === this.filter);
             }
-            if (this.filter === 'pending') {
-                return this.transactions.filter(tx => !['completed','cancelled','expired'].includes(tx.status));
+
+            const q = (this.search || '').trim().toLowerCase();
+            if (q) {
+                list = list.filter(tx =>
+                    (tx.reference_id || '').toLowerCase().includes(q)
+                    || (tx.currency_from || '').toLowerCase().includes(q)
+                    || this.statusLabel(tx.status).toLowerCase().includes(q)
+                    || String(tx.amount_sent).includes(q)
+                    || String(tx.amount_received).includes(q)
+                );
             }
-            return this.transactions.filter(tx => tx.status === this.filter);
+            return list;
         },
 
         formatCurrency(val) {
