@@ -276,6 +276,21 @@
         position:relative; line-height:1.5;
     }
 
+    /* ============ CARTÃO DE SALDO ============ */
+    .dc-balance {
+        background:#fff; border:1px solid #e5e5e5; border-radius:16px;
+        padding:1.25rem 1.5rem; margin-bottom:1rem;
+    }
+    .dc-balance__top { display:flex; align-items:center; justify-content:space-between; }
+    .dc-balance__label { font-size:0.8rem; color:#737373; font-weight:600; }
+    .dc-balance__eye { background:none; border:none; cursor:pointer; color:#a3a3a3; padding:4px; display:flex; align-items:center; }
+    .dc-balance__eye:hover { color:#404040; }
+    .dc-balance__amount { font-family:'Syne',sans-serif; font-weight:800; font-size:2rem; color:#0a0d0b; line-height:1.1; margin-top:0.5rem; letter-spacing:-0.02em; }
+    .dc-balance__cur { font-size:1rem; color:#737373; font-weight:600; margin-left:0.35rem; }
+    .dc-balance__chip { display:inline-flex; align-items:center; gap:0.375rem; margin-top:0.75rem; font-size:0.72rem; font-weight:600; padding:0.25rem 0.6rem; border-radius:999px; }
+    .dc-balance__chip.ok { background:#f0faf4; color:#007a34; }
+    .dc-balance__chip.pending { background:#fffbeb; color:#b45309; }
+
     /* ============ KYC STATUS BANNER ============ */
     .dc-kyc-banner {
         border-radius:12px;
@@ -789,6 +804,32 @@
                         Completa a tua verificação para começar a transacionar.
                     @endif
                 </div>
+            </div>
+
+            {{-- CARTÃO DE SALDO --}}
+            <div class="dc-balance" x-data="{ hide: false }">
+                <div class="dc-balance__top">
+                    <span class="dc-balance__label">Saldo da conta</span>
+                    <button type="button" class="dc-balance__eye" @click="hide = !hide" :aria-label="hide ? 'Mostrar saldo' : 'Esconder saldo'">
+                        <svg x-show="!hide" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg x-show="hide" x-cloak width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </div>
+                <div class="dc-balance__amount">
+                    <span x-show="!hide">{{ number_format($user->balance ?? 0, 2, ',', '.') }}</span>
+                    <span x-show="hide" x-cloak>••••••</span><span class="dc-balance__cur">AOA</span>
+                </div>
+                @if($user->is_fully_verified)
+                    <span class="dc-balance__chip ok">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Conta verificada
+                    </span>
+                @else
+                    <span class="dc-balance__chip pending">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01" stroke-linecap="round"/><circle cx="12" cy="12" r="9"/></svg>
+                        Verificação pendente
+                    </span>
+                @endif
             </div>
 
             {{-- ============ CONTINUAR NA APP (Android) ============ --}}
