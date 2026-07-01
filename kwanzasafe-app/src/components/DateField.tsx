@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, fontSize, radius, spacing } from '@/theme';
@@ -53,7 +53,18 @@ export function DateField({
   yearOrder?: 'asc' | 'desc';
 }) {
   const [open, setOpen] = useState<Part | null>(null);
-  const { y, m, d } = parse(value);
+  // Estado interno dos três componentes (ano/mês/dia). É a fonte de verdade da
+  // APRESENTAÇÃO, para que uma seleção PARCIAL (ex.: só o ano) fique visível e
+  // não se perca — o `value` do pai só recebe uma data COMPLETA (AAAA-MM-DD).
+  const [parts, setParts] = useState(() => parse(value));
+  const { y, m, d } = parts;
+
+  // Sincroniza a partir do pai apenas quando este traz uma data completa (ex.:
+  // reposição externa). Ignora '' para não apagar uma seleção parcial em curso.
+  useEffect(() => {
+    const p = parse(value);
+    if (p.y && p.m && p.d) setParts(p);
+  }, [value]);
 
   const years: number[] = [];
   for (let yr = minYear; yr <= maxYear; yr++) years.push(yr);
@@ -66,11 +77,14 @@ export function DateField({
   const setPart = (part: Part, val: number) => {
     let ny = y, nm = m, nd = d;
     if (part === 'y') ny = val;
-    if (part === 'm') nm = val;
-    if (part === 'd') nd = val;
+    else if (part === 'm') nm = val;
+    else nd = val;
     // Ajusta o dia se passou a ser inválido (ex.: 31 → abril).
     const md = daysInMonth(ny, nm);
     if (nd > md) nd = md;
+    // Persiste já a seleção (mesmo incompleta) para aparecer no seletor…
+    setParts({ y: ny, m: nm, d: nd });
+    // …e só envia ao pai uma data COMPLETA em AAAA-MM-DD (ou '' se incompleta).
     onChange(ny && nm && nd ? `${ny}-${pad(nm)}-${pad(nd)}` : '');
     setOpen(null);
   };
