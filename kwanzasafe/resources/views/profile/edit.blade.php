@@ -522,7 +522,7 @@
         </div>
 
         {{-- ELIMINAR CONTA --}}
-        <div class="pf-card danger">
+        <div class="pf-card danger" id="delete">
             @include('profile.partials.delete-user-form')
         </div>
 

@@ -110,6 +110,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/wallet',        [PaymentWalletController::class, 'store'])  ->name('wallet.store');
     Route::delete('/wallet/{id}', [PaymentWalletController::class, 'destroy'])->name('wallet.destroy');
 
+    // Definições (hub central)
+    Route::get('/settings', fn() => view('settings'))->name('settings');
+
     // Central de notificações
     Route::get('/notifications',              [NotificationController::class, 'index'])      ->name('notifications.index');
     Route::post('/notifications/read-all',    [NotificationController::class, 'markAllRead'])->name('notifications.read_all');
