@@ -103,6 +103,20 @@
     .dc-topbar__brand { display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; text-decoration:none; }
     .dc-topbar__logo { height:30px; width:auto; }
 
+    .dc-topbar__bell {
+        position:relative; flex-shrink:0;
+        width:38px; height:38px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        color:#404040; background:transparent; border:none; cursor:pointer;
+        text-decoration:none; transition:background 0.15s;
+    }
+    .dc-topbar__bell:hover { background:#f5f5f5; }
+    .dc-topbar__bell-badge {
+        position:absolute; top:4px; right:4px; min-width:16px; height:16px; padding:0 4px;
+        background:#dc2626; color:#fff; border-radius:999px;
+        font-size:0.6rem; font-weight:700; line-height:16px; text-align:center;
+        border:2px solid #fff;
+    }
     .dc-topbar__avatar {
         width:36px; height:36px; border-radius:50%; flex-shrink:0;
         background:#d1f2e0; color:#007a34;
@@ -647,6 +661,12 @@
         <a href="{{ url('/') }}" class="dc-topbar__brand" aria-label="KwanzaSafe — início">
             <img src="{{ asset('assets/images/logos/logo-isotipo.png') }}" alt="KwanzaSafe" class="dc-topbar__logo">
         </a>
+        <a href="{{ route('notifications.index') }}" class="dc-topbar__bell" aria-label="Notificações">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            @if(($unreadNotifications ?? 0) > 0)
+                <span class="dc-topbar__bell-badge">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>
+            @endif
+        </a>
         <button class="dc-topbar__avatar" @click="setTab('profile')" aria-label="Perfil">
             @if(ks_file($user->display_photo_path))
                 <img loading="lazy" decoding="async" src="{{ ks_file($user->display_photo_path) }}" alt="">
@@ -700,10 +720,17 @@
                 <svg class="dc-nav__icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
                 IBAN
             </button>
+            <a href="{{ route('notifications.index') }}" class="dc-nav">
+                <svg class="dc-nav__icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                Notificações
+                @if(($unreadNotifications ?? 0) > 0)
+                    <span class="dc-nav__badge">{{ $unreadNotifications }}</span>
+                @endif
+            </a>
             <button type="button" class="dc-nav" :class="{'is-active': activeTab === 'support'}" @click="setTab('support')">
                 <svg class="dc-nav__icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 Suporte
-                @if($unreadMessages ?? 0 > 0)
+                @if(($unreadMessages ?? 0) > 0)
                     <span class="dc-nav__badge">{{ $unreadMessages }}</span>
                 @endif
             </button>
@@ -1201,6 +1228,54 @@
                     </div>
                 @endforeach
             @endif
+
+            {{-- ===== CARTEIRAS (Bybit / Binance / RedotPay) ===== --}}
+            @php
+                $providerLabels = ['bybit' => 'Bybit', 'binance' => 'Binance', 'redotpay' => 'RedotPay'];
+            @endphp
+            <div class="dc-section__head" style="margin-top:1.75rem;">
+                <h2 class="dc-section__title">Carteiras (cripto)</h2>
+                <button type="button" class="dc-action-btn primary" style="padding:0.5rem 0.875rem;" @click="openWalletModal = true">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+                    <span style="font-family:'Syne',sans-serif; font-weight:800; font-size:0.75rem;">Adicionar</span>
+                </button>
+            </div>
+
+            @if(($wallets ?? collect())->isEmpty())
+                <div class="dc-empty">
+                    <div class="dc-empty__icon">
+                        <svg width="26" height="26" fill="none" stroke="#a3a3a3" stroke-width="1.75" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="dc-empty__text">Sem carteiras registadas</div>
+                    <div class="dc-empty__sub">Adiciona a tua carteira Bybit, Binance ou RedotPay para receberes.</div>
+                    <button type="button" class="dc-empty__cta" @click="openWalletModal = true">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+                        Adicionar carteira
+                    </button>
+                </div>
+            @else
+                @foreach($wallets as $w)
+                    <div class="dc-iban-card">
+                        <div class="dc-iban-card__head">
+                            <div style="flex:1; min-width:0;">
+                                <div class="dc-iban-card__bank">
+                                    {{ $providerLabels[$w->provider] ?? ucfirst($w->provider) }}
+                                    @if($w->network) <span style="font-weight:500; color:#737373; font-size:0.75rem;">· {{ $w->network }}</span> @endif
+                                    @if($w->is_default) <span style="font-weight:700; color:#007a34; font-size:0.7rem;">· Predefinida</span> @endif
+                                </div>
+                                <div class="dc-iban-card__holder">{{ $w->holder_name }}</div>
+                            </div>
+                            <form method="POST" action="{{ route('wallet.destroy', $w->id) }}"
+                                  onsubmit="return confirm('Apagar esta carteira?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="dc-iban-card__del">Apagar</button>
+                            </form>
+                        </div>
+                        <div class="dc-iban-card__num">{{ $w->identifier }}</div>
+                    </div>
+                @endforeach
+            @endif
         </div>
 
         {{-- ============ SUPPORT ============ --}}
@@ -1340,6 +1415,49 @@
         </div>
     </div>
 
+    {{-- ============ MODAL ADICIONAR CARTEIRA ============ --}}
+    <div x-show="openWalletModal"
+         x-cloak
+         x-transition.opacity
+         class="dc-modal-overlay"
+         @click.self="openWalletModal = false"
+         @keydown.escape.window="openWalletModal = false">
+        <div class="dc-modal">
+            <div class="dc-modal__title">Adicionar carteira</div>
+            <div class="dc-modal__sub">Carteira Bybit, Binance ou RedotPay onde queres receber. O titular tem de coincidir com o teu nome do KYC.</div>
+            <form method="POST" action="{{ route('wallet.store') }}">
+                @csrf
+                <div class="dc-modal__field">
+                    <label class="dc-modal__label">Fornecedor</label>
+                    <select name="provider" class="dc-modal__input" required>
+                        <option value="bybit">Bybit</option>
+                        <option value="binance">Binance</option>
+                        <option value="redotpay">RedotPay</option>
+                    </select>
+                </div>
+                <div class="dc-modal__field">
+                    <label class="dc-modal__label">Titular da carteira</label>
+                    <input type="text" name="holder_name" class="dc-modal__input" value="{{ $user->full_name }}" required>
+                </div>
+                <div class="dc-modal__field">
+                    <label class="dc-modal__label">Identificador (email / UID)</label>
+                    <input type="text" name="identifier" class="dc-modal__input" placeholder="Ex.: email da conta ou UID" required>
+                </div>
+                <div class="dc-modal__field">
+                    <label class="dc-modal__label">Rede (opcional)</label>
+                    <input type="text" name="network" class="dc-modal__input" placeholder="Ex.: TRC20, ERC20">
+                </div>
+                <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; color:#404040; margin-bottom:0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="is_default" value="1"> Usar como predefinida
+                </label>
+                <div class="dc-modal__actions">
+                    <button type="button" class="dc-modal__btn dc-modal__btn-cancel" @click="openWalletModal = false">Cancelar</button>
+                    <button type="submit" class="dc-modal__btn dc-modal__btn-save">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     {{-- ============ BOTTOM NAV (mobile only) ============ --}}
     <nav class="dc-bottom" aria-label="Navegação principal">
         <button type="button" class="dc-bottom-btn" :class="{'is-active': activeTab === 'home'}" @click="setTab('home')">
@@ -1450,6 +1568,7 @@ function clientDashboard() {
         activeTab: '{{ $initialTab }}',
         sidebarOpen: false,
         openIbanModal: false,
+        openWalletModal: false,
 
         // Filtros
         filter: window.ksPersist ? window.ksPersist.loadState('client_filter', 'all') : 'all',
@@ -1490,6 +1609,10 @@ function clientDashboard() {
             });
 
             this.$watch('openIbanModal', open => {
+                document.body.style.overflow = open ? 'hidden' : '';
+            });
+
+            this.$watch('openWalletModal', open => {
                 document.body.style.overflow = open ? 'hidden' : '';
             });
         },

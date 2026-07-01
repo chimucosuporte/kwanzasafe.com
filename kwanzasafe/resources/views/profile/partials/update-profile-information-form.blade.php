@@ -25,9 +25,9 @@
     <div class="pf-field">
         <label for="email" class="pf-label">Email</label>
         <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}"
-               required autocomplete="username"
-               class="pf-input @error('email') error @enderror">
-        @error('email') <div class="pf-err">{{ $message }}</div> @enderror
+               readonly autocomplete="username"
+               class="pf-input" style="background:var(--ks-gray-100); color:var(--ks-gray-600); cursor:not-allowed;">
+        <div class="pf-err" style="color:var(--ks-gray-500);">Para alterar o email, usa a secção “Alterar email” abaixo (com confirmação por código).</div>
 
         @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
             <div class="pf-status warn" style="margin-top:0.75rem; margin-bottom:0;">

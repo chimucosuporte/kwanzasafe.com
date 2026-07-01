@@ -66,6 +66,23 @@
 .tr-status-label { font-size:0.625rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8; }
 .tr-status-value { font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; color:#0f172a; }
 .tr-ref-badge { margin-left:auto; background:#064e3b; color:white; padding:0.375rem 0.875rem; border-radius:20px; font-family:'Syne',sans-serif; font-size:0.7rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; }
+/* ===== TIMELINE ===== */
+.tl-item { position:relative; display:flex; gap:0.875rem; padding-bottom:1.5rem; }
+.tl-item:last-child { padding-bottom:0; }
+.tl-item::before { content:''; position:absolute; left:13px; top:28px; bottom:-2px; width:2px; background:#e5e7eb; }
+.tl-item:last-child::before { display:none; }
+.tl-item.done::before { background:#009d44; }
+.tl-node { width:28px; height:28px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:2px solid #e5e7eb; background:#fff; color:#94a3b8; font-size:0.72rem; font-weight:700; z-index:1; }
+.tl-item.done .tl-node { background:#009d44; border-color:#009d44; color:#fff; }
+.tl-item.current .tl-node { border-color:#009d44; color:#007a34; background:#f0faf4; }
+.tl-item.terminal .tl-node { background:#dc2626; border-color:#dc2626; color:#fff; }
+.tl-body { padding-top:3px; }
+.tl-label { font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.9rem; color:#0f172a; }
+.tl-item.todo .tl-label { color:#94a3b8; }
+.tl-item.terminal .tl-label { color:#dc2626; }
+.tl-time { font-size:0.75rem; color:#94a3b8; margin-top:2px; }
+.tl-item.current .tl-time { color:#007a34; font-weight:600; }
+
 .tr-card { background:white; border-radius:1.5rem; border:1px solid #e2e8f0; box-shadow:0 4px 24px rgba(6,78,59,0.06); padding:1.5rem; margin-bottom:1.25rem; }
 .tr-card__title { font-family:'Syne',sans-serif; font-size:0.875rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem; }
 .tr-amounts { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
@@ -216,6 +233,71 @@
                 </div>
             </div>
             <div class="tr-ref-badge">#{{ $transaction->reference_id }}</div>
+        </div>
+
+        {{-- ===== TIMELINE DO ESTADO ===== --}}
+        @php
+            $terminated = in_array($transaction->status, ['cancelled', 'expired']);
+
+            // Progresso alcançado (1..5) inferido do estado + timestamps reais.
+            $progress = 1;
+            if (in_array($transaction->status, ['awaiting_payment', 'payment_received', 'processing', 'aoa_sent', 'completed'])) $progress = max($progress, 2);
+            if ($transaction->payment_received_at || in_array($transaction->status, ['payment_received', 'processing', 'aoa_sent', 'completed'])) $progress = max($progress, 3);
+            if ($transaction->aoa_sent_at || in_array($transaction->status, ['aoa_sent', 'completed'])) $progress = max($progress, 4);
+            if ($transaction->status === 'completed' || $transaction->client_confirmed_at) $progress = 5;
+
+            $isCompleted = $transaction->status === 'completed';
+
+            $milestones = [
+                ['n' => 1, 'label' => 'Transação criada',     'ts' => $transaction->created_at],
+                ['n' => 2, 'label' => 'A aguardar pagamento',  'ts' => null],
+                ['n' => 3, 'label' => 'Pagamento recebido',    'ts' => $transaction->payment_received_at],
+                ['n' => 4, 'label' => 'Kwanzas enviados',      'ts' => $transaction->aoa_sent_at],
+                ['n' => 5, 'label' => 'Concluída',             'ts' => $transaction->client_confirmed_at],
+            ];
+        @endphp
+        <div class="tr-card">
+            <div class="tr-card__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Estado da transação
+            </div>
+
+            @foreach($milestones as $m)
+                @php
+                    if ($m['n'] < $progress) $state = 'done';
+                    elseif ($m['n'] == $progress) $state = ($isCompleted || $terminated) ? 'done' : 'current';
+                    else $state = 'todo';
+                @endphp
+                <div class="tl-item {{ $state }}">
+                    <div class="tl-node">
+                        @if($state === 'done')
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        @else
+                            {{ $m['n'] }}
+                        @endif
+                    </div>
+                    <div class="tl-body">
+                        <div class="tl-label">{{ $m['label'] }}</div>
+                        @if($state === 'current')
+                            <div class="tl-time">A decorrer…</div>
+                        @elseif($m['ts'])
+                            <div class="tl-time">{{ $m['ts']->format('d/m/Y H:i') }}</div>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+
+            @if($terminated)
+                <div class="tl-item terminal">
+                    <div class="tl-node">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="tl-body">
+                        <div class="tl-label">{{ $transaction->status === 'cancelled' ? 'Operação cancelada' : 'Operação expirada' }}</div>
+                        <div class="tl-time">{{ $transaction->updated_at->format('d/m/Y H:i') }}</div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         {{-- Resumo Financeiro --}}

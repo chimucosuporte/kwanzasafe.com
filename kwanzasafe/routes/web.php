@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\PaymentAccountAdminController;
 use App\Http\Controllers\Admin\MessageAdminController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\BeneficiaryController;
+use App\Http\Controllers\PaymentWalletController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\RecourseController;
 use App\Http\Controllers\Admin\RecourseAdminController;
@@ -24,6 +25,7 @@ use App\Models\ExchangeRate;
 use App\Models\ChatMessage;
 use App\Http\Controllers\OtpController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,7 +62,11 @@ Route::get('/dashboard', function () {
                         ->where('is_read', false)
                         ->count();
 
-    return view('dashboard', compact('rates', 'transactions', 'beneficiaries', 'wallets', 'unreadMessages'));
+    $unreadNotifications = \App\Models\UserNotification::where('user_id', $user->id)
+                        ->where('is_read', false)
+                        ->count();
+
+    return view('dashboard', compact('rates', 'transactions', 'beneficiaries', 'wallets', 'unreadMessages', 'unreadNotifications'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // AÇÕES CLIENTE
@@ -71,6 +77,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile',    [ProfileController::class, 'edit'])   ->name('profile.edit');
     Route::patch('/profile',  [ProfileController::class, 'update']) ->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Alteração de email com dupla confirmação (código no email atual + no novo)
+    Route::post('/profile/email/request', [ProfileController::class, 'requestEmailChange'])->middleware('throttle:6,1')->name('profile.email.request');
+    Route::post('/profile/email/confirm', [ProfileController::class, 'confirmEmailChange'])->middleware('throttle:8,1')->name('profile.email.confirm');
 
     Route::post('/verify/data',     [VerificationController::class, 'updatePersonalData'])->name('verify.data');
     Route::post('/verify/phone',        [VerificationController::class, 'updatePhone'])  ->middleware('throttle:6,1') ->name('verify.phone');
@@ -96,6 +106,14 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/beneficiary',        [BeneficiaryController::class, 'store'])  ->name('beneficiary.store');
     Route::delete('/beneficiary/{id}', [BeneficiaryController::class, 'destroy'])->name('beneficiary.destroy');
+
+    Route::post('/wallet',        [PaymentWalletController::class, 'store'])  ->name('wallet.store');
+    Route::delete('/wallet/{id}', [PaymentWalletController::class, 'destroy'])->name('wallet.destroy');
+
+    // Central de notificações
+    Route::get('/notifications',              [NotificationController::class, 'index'])      ->name('notifications.index');
+    Route::post('/notifications/read-all',    [NotificationController::class, 'markAllRead'])->name('notifications.read_all');
+    Route::post('/notifications/{id}/read',   [NotificationController::class, 'markRead'])   ->name('notifications.read');
 
     Route::get('/verify/email',         [OtpController::class, 'showEmailVerification'])->name('otp.email.verify');
     Route::post('/verify/email/send',   [OtpController::class, 'sendEmailOtp'])         ->middleware('throttle:5,1') ->name('otp.email.send');

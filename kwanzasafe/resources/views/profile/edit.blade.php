@@ -273,6 +273,61 @@
             @include('profile.partials.update-profile-information-form')
         </div>
 
+        {{-- ALTERAR EMAIL (dupla confirmação) --}}
+        @php $pendingEmail = session('pending_email_change'); @endphp
+        <div class="pf-card" id="email-change">
+            <div class="pf-card__head">
+                <div class="pf-card__head-l">
+                    <div class="pf-card__title">Alterar email</div>
+                    <p class="pf-card__sub">Por segurança, enviamos um código ao teu email <strong>atual</strong> e outro ao <strong>novo</strong>. Precisas de ambos para confirmar.</p>
+                </div>
+            </div>
+
+            {{-- Passo 1: pedir a alteração --}}
+            <form method="POST" action="{{ route('profile.email.request') }}" style="margin-bottom:{{ $pendingEmail ? '1.25rem' : '0' }};">
+                @csrf
+                <div class="pf-field">
+                    <label class="pf-label">Novo email</label>
+                    <div class="pf-inline-form">
+                        <input type="email" name="email" value="{{ old('email', $pendingEmail) }}"
+                               placeholder="novo@email.com"
+                               class="pf-input @error('email') error @enderror">
+                        <button type="submit" class="pf-btn">{{ $pendingEmail ? 'Reenviar códigos' : 'Enviar códigos' }}</button>
+                    </div>
+                    @error('email') <div class="pf-err">{{ $message }}</div> @enderror
+                </div>
+            </form>
+
+            {{-- Passo 2: confirmar com os dois códigos (aparece após o pedido) --}}
+            @if($pendingEmail)
+                <form method="POST" action="{{ route('profile.email.confirm') }}">
+                    @csrf
+                    <input type="hidden" name="email" value="{{ $pendingEmail }}">
+                    <div class="pf-status warn">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Enviámos os códigos. Introduz os dois abaixo para alterar para <strong>{{ $pendingEmail }}</strong>.</span>
+                    </div>
+                    <div class="pf-grid2">
+                        <div class="pf-field">
+                            <label class="pf-label">Código do email atual</label>
+                            <input type="text" name="code_current" inputmode="numeric" maxlength="6" placeholder="000000"
+                                   class="pf-input @error('code_current') error @enderror" style="text-align:center; letter-spacing:0.2em;">
+                            @error('code_current') <div class="pf-err">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="pf-field">
+                            <label class="pf-label">Código do novo email</label>
+                            <input type="text" name="code_new" inputmode="numeric" maxlength="6" placeholder="000000"
+                                   class="pf-input @error('code_new') error @enderror" style="text-align:center; letter-spacing:0.2em;">
+                            @error('code_new') <div class="pf-err">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+                    <div class="pf-actions">
+                        <button type="submit" class="pf-btn dark">Confirmar alteração</button>
+                    </div>
+                </form>
+            @endif
+        </div>
+
         {{-- ===== PASSO 1 — DADOS PESSOAIS ===== --}}
         <div class="pf-card" id="kyc-data">
             <div class="pf-card__head">
