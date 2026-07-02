@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\RecourseController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\VerificationController;
+use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Api\Admin\TransactionController as AdminTransactionController;
+use App\Http\Controllers\Api\Admin\KycController as AdminKycController;
 use App\Http\Controllers\FileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -122,5 +125,29 @@ Route::prefix('v1')->group(function () {
 
         // Ficheiros privados (anexos/comprovativos) — autorização por token.
         Route::get('/file/{path}', [FileController::class, 'show'])->where('path', '.*');
+
+        /*
+        | ADMIN (app de administração) — requer staff (is_admin).
+        | Espelha o painel admin web; reutiliza TransactionFlow/KycBot/AuditLogger.
+        */
+        Route::middleware('api_admin')->prefix('admin')->group(function () {
+            Route::get('/stats', [AdminDashboardController::class, 'stats']);
+
+            Route::get('/transactions', [AdminTransactionController::class, 'index']);
+            Route::get('/transactions/{id}', [AdminTransactionController::class, 'show']);
+            Route::post('/transactions/{id}/request-payment', [AdminTransactionController::class, 'requestPayment']);
+            Route::post('/transactions/{id}/payment-received', [AdminTransactionController::class, 'paymentReceived']);
+            Route::post('/transactions/{id}/aoa-sent', [AdminTransactionController::class, 'aoaSent']);
+            Route::post('/transactions/{id}/approve', [AdminTransactionController::class, 'approve']);
+            Route::post('/transactions/{id}/cancel', [AdminTransactionController::class, 'cancel']);
+            Route::post('/transactions/{id}/assign', [AdminTransactionController::class, 'assign']);
+            Route::get('/transactions/{id}/messages', [AdminTransactionController::class, 'messages'])->middleware('throttle:90,1');
+            Route::post('/transactions/{id}/messages', [AdminTransactionController::class, 'sendMessage'])->middleware('throttle:60,1');
+
+            Route::get('/kyc', [AdminKycController::class, 'index']);
+            Route::get('/kyc/{userId}', [AdminKycController::class, 'show']);
+            Route::post('/kyc/{userId}/approve', [AdminKycController::class, 'approve']);
+            Route::post('/kyc/{userId}/reject', [AdminKycController::class, 'reject']);
+        });
     });
 });

@@ -1,0 +1,126 @@
+<?php
+
+use App\Models\Transaction;
+use App\Models\User;
+use Laravel\Sanctum\Sanctum;
+
+/*
+| API admin (app de administração) — autorização, stats, transições, KYC.
+*/
+
+function apiAdminUser(array $attrs = []): User
+{
+    return User::factory()->create(array_merge(['is_admin' => true], $attrs));
+}
+
+// ---------------------------------------------------------------------------
+// Autorização
+// ---------------------------------------------------------------------------
+
+it('bloqueia clientes (não-admin) nos endpoints admin', function () {
+    Sanctum::actingAs(User::factory()->create()); // cliente normal
+
+    $this->getJson('/api/v1/admin/stats')->assertStatus(403);
+    $this->getJson('/api/v1/admin/transactions')->assertStatus(403);
+    $this->getJson('/api/v1/admin/kyc')->assertStatus(403);
+});
+
+it('exige autenticação nos endpoints admin', function () {
+    $this->getJson('/api/v1/admin/stats')->assertStatus(401);
+});
+
+// ---------------------------------------------------------------------------
+// Dashboard / stats
+// ---------------------------------------------------------------------------
+
+it('devolve stats ao admin', function () {
+    Transaction::factory()->completed()->create();
+    Transaction::factory()->pending()->create();
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->getJson('/api/v1/admin/stats?period=all')
+        ->assertOk()
+        ->assertJsonStructure(['stats' => ['tx_pending', 'tx_completed', 'volume_by_currency', 'period'], 'chart']);
+});
+
+// ---------------------------------------------------------------------------
+// Transações
+// ---------------------------------------------------------------------------
+
+it('lista transações para o admin', function () {
+    Transaction::factory()->pending()->create();
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->getJson('/api/v1/admin/transactions?assigned=all&status=pending')
+        ->assertOk()
+        ->assertJsonStructure(['data' => [['reference_id', 'status', 'client_email', 'unread_count']], 'meta']);
+});
+
+it('faz a transição pending → awaiting_payment (solicitar pagamento)', function () {
+    $tx = Transaction::factory()->pending()->create();
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->postJson("/api/v1/admin/transactions/{$tx->id}/request-payment")
+        ->assertOk()
+        ->assertJsonPath('data.status', 'awaiting_payment');
+
+    expect($tx->fresh()->status)->toBe('awaiting_payment');
+});
+
+it('recusa transição inválida com 422', function () {
+    $tx = Transaction::factory()->completed()->create();
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->postJson("/api/v1/admin/transactions/{$tx->id}/request-payment")
+        ->assertStatus(422);
+});
+
+it('aprova (conclui) uma transação em aoa_sent', function () {
+    $tx = Transaction::factory()->aoaSent()->create();
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->postJson("/api/v1/admin/transactions/{$tx->id}/approve")
+        ->assertOk()
+        ->assertJsonPath('data.status', 'completed');
+
+    expect($tx->fresh()->status)->toBe('completed');
+});
+
+it('envia mensagem no chat da transação', function () {
+    $tx = Transaction::factory()->awaitingPayment()->create();
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->postJson("/api/v1/admin/transactions/{$tx->id}/messages", ['message_text' => 'Olá, aguardamos o comprovativo.'])
+        ->assertCreated()
+        ->assertJsonPath('data.is_mine', true);
+
+    $this->assertDatabaseHas('chat_messages', ['transaction_id' => $tx->id, 'message_text' => 'Olá, aguardamos o comprovativo.']);
+});
+
+// ---------------------------------------------------------------------------
+// KYC
+// ---------------------------------------------------------------------------
+
+it('aprova o KYC de um utilizador', function () {
+    $client = User::factory()->create(['identity_document_path' => 'kyc/documents/doc.jpg', 'identity_verified_at' => null]);
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->postJson("/api/v1/admin/kyc/{$client->id}/approve")
+        ->assertOk();
+
+    expect($client->fresh()->identity_verified_at)->not->toBeNull();
+});
+
+it('rejeita o KYC (limpa documento) e exige motivo', function () {
+    $client = User::factory()->create(['identity_document_path' => 'kyc/documents/doc.jpg', 'profile_photo_path' => 'kyc/photos/s.jpg']);
+    Sanctum::actingAs(apiAdminUser());
+
+    // sem motivo → 422
+    $this->postJson("/api/v1/admin/kyc/{$client->id}/reject", [])->assertStatus(422);
+
+    // com motivo → ok e documento limpo
+    $this->postJson("/api/v1/admin/kyc/{$client->id}/reject", ['reason' => 'Documento ilegível, reenvie.'])
+        ->assertOk();
+
+    expect($client->fresh()->identity_document_path)->toBeNull();
+});
