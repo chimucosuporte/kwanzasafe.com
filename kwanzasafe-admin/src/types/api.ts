@@ -106,3 +106,36 @@ export interface PickedFile {
   name: string;
   mimeType: string;
 }
+
+export interface AdminRate {
+  id: number;
+  currency_from: string;
+  currency_to: string;
+  rate: string;
+  is_active: boolean;
+  updated_at: string | null;
+}
+
+export interface AdminUserRow {
+  id: number;
+  full_name: string | null;
+  email: string;
+  is_admin: boolean;
+  is_verified: boolean;
+  kyc_pending: boolean;
+  created_at: string | null;
+}
+
+export interface AdminUserDetail extends AdminUserRow {
+  is_super_admin: boolean;
+  role_label: string | null;
+  phone_number: string | null;
+  phone_verified: boolean;
+  email_verified: boolean;
+  bi_number: string | null;
+  province: string | null;
+  country: string | null;
+  balance: string;
+  kyc_score: number | null;
+  tx_stats?: { total: number; completed: number; active: number; cancelled: number };
+}

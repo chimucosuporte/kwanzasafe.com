@@ -1,4 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -15,6 +17,7 @@ const PERIODS = [
 ];
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [period, setPeriod] = useState('today');
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
@@ -64,6 +67,18 @@ export default function DashboardScreen() {
               <Kpi label="Utilizadores" value={s.total_users} tone={colors.text} />
               <Kpi label="Canceladas" value={s.tx_cancelled} tone={colors.danger} />
             </View>
+
+            <Text style={styles.mgmtTitle}>Gestão</Text>
+            <View style={styles.mgmtRow}>
+              <Pressable style={styles.mgmt} onPress={() => router.push('/rates')}>
+                <Ionicons name="trending-up" size={22} color={colors.primaryBright} />
+                <Text style={styles.mgmtLabel}>Taxas</Text>
+              </Pressable>
+              <Pressable style={styles.mgmt} onPress={() => router.push('/users')}>
+                <Ionicons name="people" size={22} color={colors.primaryBright} />
+                <Text style={styles.mgmtLabel}>Utilizadores</Text>
+              </Pressable>
+            </View>
           </>
         ) : null}
 
@@ -101,6 +116,11 @@ const styles = StyleSheet.create({
   kpi: { flexGrow: 1, flexBasis: '47%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md },
   kpiValue: { fontFamily: fonts.display, fontSize: fontSize.xxl },
   kpiLabel: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+
+  mgmtTitle: { fontFamily: fonts.bodyBold, fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
+  mgmtRow: { flexDirection: 'row', gap: spacing.sm },
+  mgmt: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md },
+  mgmtLabel: { fontFamily: fonts.bodyBold, fontSize: fontSize.sm, color: colors.text },
 
   errBox: { backgroundColor: colors.dangerTint, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
   errText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.danger, textAlign: 'center' },

@@ -1,6 +1,7 @@
 import { api } from '@/api/client';
 import type {
-  AdminChatMessage, AdminStats, AdminTransaction, KycDetail, KycListItem, PickedFile,
+  AdminChatMessage, AdminRate, AdminStats, AdminTransaction, AdminUserDetail, AdminUserRow,
+  KycDetail, KycListItem, PickedFile,
 } from '@/types/api';
 
 // ---- Dashboard ----
@@ -62,4 +63,31 @@ export async function approveKyc(userId: number): Promise<void> {
 
 export async function rejectKyc(userId: number, reason: string): Promise<void> {
   await api.post(`/admin/kyc/${userId}/reject`, { reason });
+}
+
+// ---- Taxas ----
+export async function fetchRates(): Promise<AdminRate[]> {
+  const { data } = await api.get('/admin/rates');
+  return data.data;
+}
+
+export async function updateRate(id: number, payload: { rate: number; is_active: boolean }): Promise<AdminRate> {
+  const { data } = await api.put(`/admin/rates/${id}`, payload);
+  return data.data;
+}
+
+// ---- Utilizadores ----
+export async function fetchUsers(params: { kyc?: string; q?: string }): Promise<{ data: AdminUserRow[]; meta: { total: number } }> {
+  const { data } = await api.get('/admin/users', { params });
+  return data;
+}
+
+export async function fetchUser(id: number): Promise<AdminUserDetail> {
+  const { data } = await api.get(`/admin/users/${id}`);
+  return data.data;
+}
+
+export async function toggleUserAdmin(id: number): Promise<AdminUserDetail> {
+  const { data } = await api.post(`/admin/users/${id}/toggle-admin`);
+  return data.data;
 }
