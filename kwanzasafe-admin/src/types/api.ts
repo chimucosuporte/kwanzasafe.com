@@ -126,6 +126,41 @@ export interface AdminUserRow {
   created_at: string | null;
 }
 
+export interface AdminStaff {
+  id: number;
+  full_name: string | null;
+  email: string;
+  is_active: boolean;
+  open_tickets: number;
+  created_at: string | null;
+}
+
+export interface RecourseItem {
+  id: number;
+  transaction_id: number;
+  reference_id: string | null;
+  client_name: string;
+  client_email: string;
+  reason: string | null;
+  resolution: string | null;
+  status: string;
+  status_label: string;
+  created_at: string | null;
+  resolved_at: string | null;
+}
+
+export interface RecourseMessage {
+  id: number;
+  text: string;
+  is_mine: boolean;
+  is_system: boolean;
+  created_at: string | null;
+}
+
+export interface RecourseDetail extends RecourseItem {
+  messages: RecourseMessage[];
+}
+
 export interface AdminPaymentAccount {
   id: number;
   currency: string;

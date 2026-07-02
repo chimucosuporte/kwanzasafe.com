@@ -74,7 +74,11 @@ export default function DashboardScreen() {
               <MgmtCard icon="people" label="Utilizadores" onPress={() => router.push('/users')} />
               <MgmtCard icon="document-text" label="Auditoria" onPress={() => router.push('/audit')} />
               {user?.is_super_admin && (
-                <MgmtCard icon="card" label="Contas de pagamento" onPress={() => router.push('/payment-accounts')} />
+                <>
+                  <MgmtCard icon="card" label="Contas de pagamento" onPress={() => router.push('/payment-accounts')} />
+                  <MgmtCard icon="shield-half" label="Recursos" onPress={() => router.push('/recourses')} />
+                  <MgmtCard icon="people-circle" label="Funcionários" onPress={() => router.push('/staff')} />
+                </>
               )}
             </View>
           </>

@@ -1,7 +1,8 @@
 import { api } from '@/api/client';
 import type {
-  AdminChatMessage, AdminPaymentAccount, AdminRate, AdminStats, AdminTransaction, AdminUserDetail,
-  AdminUserRow, AuditResponse, KycDetail, KycListItem, PickedFile,
+  AdminChatMessage, AdminPaymentAccount, AdminRate, AdminStaff, AdminStats, AdminTransaction,
+  AdminUserDetail, AdminUserRow, AuditResponse, KycDetail, KycListItem, PickedFile,
+  RecourseDetail, RecourseItem,
 } from '@/types/api';
 
 // ---- Dashboard ----
@@ -115,4 +116,43 @@ export async function deletePaymentAccount(id: number): Promise<void> {
 export async function fetchAudit(params: { category?: string; severity?: string; search?: string }): Promise<AuditResponse> {
   const { data } = await api.get('/admin/audit', { params });
   return data;
+}
+
+// ---- Staff (super-admin) ----
+export async function fetchStaff(): Promise<{ staff: AdminStaff[]; super_admins: { id: number; full_name: string | null; email: string }[] }> {
+  const { data } = await api.get('/admin/staff');
+  return data;
+}
+
+export async function createStaff(payload: { full_name: string; email: string; password: string; password_confirmation: string }): Promise<AdminStaff> {
+  const { data } = await api.post('/admin/staff', payload);
+  return data.data;
+}
+
+export async function toggleStaffActive(id: number): Promise<AdminStaff> {
+  const { data } = await api.post(`/admin/staff/${id}/toggle-active`);
+  return data.data;
+}
+
+export async function deleteStaff(id: number): Promise<void> {
+  await api.delete(`/admin/staff/${id}`);
+}
+
+// ---- Recursos (super-admin) ----
+export async function fetchRecourses(): Promise<{ active: RecourseItem[]; resolved: RecourseItem[] }> {
+  const { data } = await api.get('/admin/recourses');
+  return data;
+}
+
+export async function fetchRecourse(id: number): Promise<RecourseDetail> {
+  const { data } = await api.get(`/admin/recourses/${id}`);
+  return data.data;
+}
+
+export async function replyRecourse(id: number, message_text: string): Promise<void> {
+  await api.post(`/admin/recourses/${id}/reply`, { message_text });
+}
+
+export async function closeRecourse(id: number, action: 'resolve' | 'reject', resolution: string): Promise<void> {
+  await api.post(`/admin/recourses/${id}/${action}`, { resolution });
 }
