@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ExchangeRate;
 use App\Models\Transaction;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
@@ -123,4 +124,49 @@ it('rejeita o KYC (limpa documento) e exige motivo', function () {
         ->assertOk();
 
     expect($client->fresh()->identity_document_path)->toBeNull();
+});
+
+// ---------------------------------------------------------------------------
+// Taxas
+// ---------------------------------------------------------------------------
+
+it('lista e atualiza taxas', function () {
+    $rate = ExchangeRate::factory()->create(['currency_from' => 'EUR', 'rate' => 900, 'is_active' => true]);
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->getJson('/api/v1/admin/rates')
+        ->assertOk()
+        ->assertJsonStructure(['data' => [['currency_from', 'rate', 'is_active']]]);
+
+    $this->putJson("/api/v1/admin/rates/{$rate->id}", ['rate' => 1250.5, 'is_active' => false])
+        ->assertOk()
+        ->assertJsonPath('data.is_active', false);
+
+    expect((float) $rate->fresh()->rate)->toBe(1250.5);
+});
+
+// ---------------------------------------------------------------------------
+// Utilizadores
+// ---------------------------------------------------------------------------
+
+it('lista utilizadores e faz toggle de admin', function () {
+    $client = User::factory()->create(['is_admin' => false]);
+    Sanctum::actingAs(apiAdminUser());
+
+    $this->getJson('/api/v1/admin/users')
+        ->assertOk()
+        ->assertJsonStructure(['data' => [['email', 'is_admin', 'is_verified']], 'meta']);
+
+    $this->postJson("/api/v1/admin/users/{$client->id}/toggle-admin")
+        ->assertOk()
+        ->assertJsonPath('data.is_admin', true);
+
+    expect($client->fresh()->is_admin)->toBeTrue();
+});
+
+it('impede o admin de alterar o seu próprio papel', function () {
+    $admin = apiAdminUser();
+    Sanctum::actingAs($admin);
+
+    $this->postJson("/api/v1/admin/users/{$admin->id}/toggle-admin")->assertStatus(422);
 });

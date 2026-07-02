@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Api\Admin\KycController as AdminKycController;
+use App\Http\Controllers\Api\Admin\RateController as AdminRateController;
+use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\FileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -148,6 +150,15 @@ Route::prefix('v1')->group(function () {
             Route::get('/kyc/{userId}', [AdminKycController::class, 'show']);
             Route::post('/kyc/{userId}/approve', [AdminKycController::class, 'approve']);
             Route::post('/kyc/{userId}/reject', [AdminKycController::class, 'reject']);
+
+            // Taxas
+            Route::get('/rates', [AdminRateController::class, 'index']);
+            Route::put('/rates/{id}', [AdminRateController::class, 'update']);
+
+            // Utilizadores
+            Route::get('/users', [AdminUserController::class, 'index']);
+            Route::get('/users/{id}', [AdminUserController::class, 'show']);
+            Route::post('/users/{id}/toggle-admin', [AdminUserController::class, 'toggleAdmin']);
         });
     });
 });
