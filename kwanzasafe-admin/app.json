@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "KwanzaSafe Admin",
+    "slug": "kwanzasafe-admin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "kwanzasafeadmin",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.kwanzasafe.admin",
+      "icon": "./assets/images/icon.png"
+    },
+    "android": {
+      "package": "com.kwanzasafe.admin",
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0d0b",
+        "foregroundImage": "./assets/images/icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0a0d0b",
+          "android": {
+            "image": "./assets/images/icon.png",
+            "imageWidth": 140
+          }
+        }
+      ],
+      "expo-secure-store"
+    ]
+  }
+}
