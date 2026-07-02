@@ -36,6 +36,7 @@
             <nav class="ksh__nav" aria-label="Navegação principal">
                 <a href="#como-funciona">Como Funciona</a>
                 <a href="#moedas">Moedas</a>
+                <a href="#sobre">Sobre</a>
                 <a href="#testemunhos">Histórias</a>
                 <a href="#faq">FAQ</a>
                 @auth
@@ -62,8 +63,9 @@
         <nav class="ksh-drawer__nav" aria-label="Navegação móvel">
             <a href="#como-funciona" @click="close()" style="--i:1">Como Funciona</a>
             <a href="#moedas" @click="close()" style="--i:2">Moedas</a>
-            <a href="#testemunhos" @click="close()" style="--i:3">Histórias</a>
-            <a href="#faq" @click="close()" style="--i:4">FAQ</a>
+            <a href="#sobre" @click="close()" style="--i:3">Sobre</a>
+            <a href="#testemunhos" @click="close()" style="--i:4">Histórias</a>
+            <a href="#faq" @click="close()" style="--i:5">FAQ</a>
             @auth
                 <a href="{{ url('/dashboard') }}" @click="close()" class="cta" style="--i:5">Meu Painel</a>
             @else

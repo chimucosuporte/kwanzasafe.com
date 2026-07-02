@@ -161,6 +161,21 @@
         details[open] .ks-faq-q::after { transform: rotate(45deg); }
         .ks-faq-a { margin-top: 0.75rem; font-size: 0.9rem; color: var(--ks-gray-700); line-height: 1.7; }
 
+        /* ============ SOBRE NÓS ============ */
+        .ks-about { display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: start; }
+        .ks-about__p { font-size: 1rem; color: var(--ks-gray-700); line-height: 1.7; margin: 0 0 1rem; }
+        .ks-about__p strong { color: var(--ks-black); font-weight: 700; }
+        .ks-about__card { background: var(--ks-gray-50); border: 1px solid var(--ks-gray-200); border-radius: 16px; padding: 1.75rem; }
+        .ks-about__card-title { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 800; color: var(--ks-black); margin: 0 0 1.25rem; }
+        .ks-about__list { margin: 0; }
+        .ks-about__list > div { padding: 0.75rem 0; border-bottom: 1px solid var(--ks-gray-200); }
+        .ks-about__list > div:last-child { border-bottom: none; padding-bottom: 0; }
+        .ks-about__list dt { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ks-gray-500); }
+        .ks-about__list dd { margin: 0.2rem 0 0; font-size: 0.95rem; color: var(--ks-black); font-weight: 500; }
+        .ks-about__list dd a { color: var(--ks-green-dark); text-decoration: none; }
+        .ks-about__list dd a:hover { text-decoration: underline; }
+        @media(max-width: 768px) { .ks-about { grid-template-columns: 1fr; gap: 2rem; } }
+
         /* ============ CTA FINAL ============ */
         .ks-cta-section { background: linear-gradient(135deg, var(--ks-green) 0%, var(--ks-green-dark) 100%); color: var(--ks-white); padding: 5rem 1.5rem; text-align: center; position: relative; overflow: hidden; }
         .ks-cta-section::before { content: ''; position: absolute; top: -50px; right: -50px; width: 250px; height: 250px; background: rgba(255,255,255,0.08); border-radius: 50%; }
@@ -458,6 +473,43 @@
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ============ SOBRE NÓS ============ --}}
+    <section class="ks-section" id="sobre">
+        <div class="ks-about">
+            <div class="ks-about__text">
+                <span class="ks-section-label">Sobre nós</span>
+                <h2 class="ks-section-title ks-reveal">Quem somos</h2>
+                <p class="ks-about__p">
+                    A <strong>KwanzaSafe Wallet</strong> é uma plataforma de carteira digital e pagamentos internacionais
+                    desenvolvida para simplificar o envio, receção e gestão de dinheiro entre diferentes moedas de forma
+                    segura, rápida e transparente.
+                </p>
+                <p class="ks-about__p">
+                    O nosso objetivo é aproximar pessoas e empresas através de soluções financeiras modernas, utilizando
+                    tecnologia, inovação e elevados padrões de segurança para facilitar pagamentos internacionais e
+                    serviços financeiros digitais.
+                </p>
+                <p class="ks-about__p">
+                    A KwanzaSafe Wallet é um produto operado pela <strong>Tec Digital (SU), LDA</strong>, empresa
+                    legalmente constituída em Angola.
+                </p>
+            </div>
+
+            <div class="ks-about__card" aria-label="Informações da empresa">
+                <h3 class="ks-about__card-title">Informações da empresa</h3>
+                <dl class="ks-about__list">
+                    <div><dt>Empresa</dt><dd>Tec Digital (SU), LDA</dd></div>
+                    <div><dt>Produto</dt><dd>KwanzaSafe Wallet</dd></div>
+                    <div><dt>NIF</dt><dd>5001241206</dd></div>
+                    <div><dt>Endereço</dt><dd>Huambo, Cidade Alta, Largo Wassanjuca, Angola</dd></div>
+                    <div><dt>Telefone</dt><dd><a href="tel:+244922279603">+244 922 279 603</a></dd></div>
+                    <div><dt>E-mail</dt><dd><a href="mailto:geral@kwanzasafe.com">geral@kwanzasafe.com</a></dd></div>
+                    <div><dt>Website</dt><dd><a href="https://kwanzasafe.com">https://kwanzasafe.com</a></dd></div>
+                </dl>
             </div>
         </div>
     </section>
