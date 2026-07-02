@@ -170,3 +170,32 @@ it('impede o admin de alterar o seu próprio papel', function () {
 
     $this->postJson("/api/v1/admin/users/{$admin->id}/toggle-admin")->assertStatus(422);
 });
+
+// ---------------------------------------------------------------------------
+// Contas de pagamento (super-admin) + Auditoria
+// ---------------------------------------------------------------------------
+
+it('super-admin cria e lista contas de pagamento', function () {
+    Sanctum::actingAs(User::factory()->create(['is_super_admin' => true]));
+
+    $this->postJson('/api/v1/admin/payment-accounts', [
+        'currency' => 'eur', 'holder' => 'KwanzaSafe Lda', 'identifier' => 'PT50000...', 'is_active' => true,
+    ])->assertCreated()->assertJsonPath('data.currency', 'EUR');
+
+    $this->getJson('/api/v1/admin/payment-accounts')
+        ->assertOk()
+        ->assertJsonStructure(['data' => [['currency', 'holder', 'identifier', 'is_active']], 'available_currencies']);
+});
+
+it('bloqueia suporte (não super-admin) nas contas de pagamento', function () {
+    Sanctum::actingAs(apiAdminUser()); // is_admin mas não super-admin
+    $this->getJson('/api/v1/admin/payment-accounts')->assertStatus(403);
+    $this->postJson('/api/v1/admin/payment-accounts', ['currency' => 'EUR', 'holder' => 'x', 'identifier' => 'y'])->assertStatus(403);
+});
+
+it('admin consulta a auditoria', function () {
+    Sanctum::actingAs(apiAdminUser());
+    $this->getJson('/api/v1/admin/audit')
+        ->assertOk()
+        ->assertJsonStructure(['data', 'meta', 'stats' => ['total_24h', 'critical_24h'], 'categories', 'severities']);
+});

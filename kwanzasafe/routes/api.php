@@ -19,6 +19,8 @@ use App\Http\Controllers\Api\Admin\TransactionController as AdminTransactionCont
 use App\Http\Controllers\Api\Admin\KycController as AdminKycController;
 use App\Http\Controllers\Api\Admin\RateController as AdminRateController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\Admin\PaymentAccountController as AdminPaymentAccountController;
+use App\Http\Controllers\Api\Admin\AuditController as AdminAuditController;
 use App\Http\Controllers\FileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -159,6 +161,17 @@ Route::prefix('v1')->group(function () {
             Route::get('/users', [AdminUserController::class, 'index']);
             Route::get('/users/{id}', [AdminUserController::class, 'show']);
             Route::post('/users/{id}/toggle-admin', [AdminUserController::class, 'toggleAdmin']);
+
+            // Auditoria (leitura)
+            Route::get('/audit', [AdminAuditController::class, 'index']);
+
+            // ===== Exclusivo do super-admin =====
+            Route::middleware('api_super_admin')->group(function () {
+                Route::get('/payment-accounts', [AdminPaymentAccountController::class, 'index']);
+                Route::post('/payment-accounts', [AdminPaymentAccountController::class, 'store']);
+                Route::put('/payment-accounts/{id}', [AdminPaymentAccountController::class, 'update']);
+                Route::delete('/payment-accounts/{id}', [AdminPaymentAccountController::class, 'destroy']);
+            });
         });
     });
 });

@@ -67,6 +67,7 @@ class Kernel extends HttpKernel
         'is_admin' => \App\Http\Middleware\IsAdmin::class,
         'is_super_admin' => \App\Http\Middleware\IsSuperAdmin::class,
         'api_admin' => \App\Http\Middleware\EnsureApiAdmin::class,
+        'api_super_admin' => \App\Http\Middleware\EnsureApiSuperAdmin::class,
     ];
 
     
