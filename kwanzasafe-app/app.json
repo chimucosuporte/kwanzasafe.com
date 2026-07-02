@@ -22,7 +22,7 @@
       "permissions": [
         "android.permission.CAMERA"
       ],
-      "versionCode": 3
+      "versionCode": 4
     },
     "web": {
       "output": "static",
