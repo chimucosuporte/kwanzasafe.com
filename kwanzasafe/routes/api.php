@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\Admin\RateController as AdminRateController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\Admin\PaymentAccountController as AdminPaymentAccountController;
 use App\Http\Controllers\Api\Admin\AuditController as AdminAuditController;
+use App\Http\Controllers\Api\Admin\StaffController as AdminStaffController;
+use App\Http\Controllers\Api\Admin\RecourseController as AdminRecourseController;
 use App\Http\Controllers\FileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -171,6 +173,19 @@ Route::prefix('v1')->group(function () {
                 Route::post('/payment-accounts', [AdminPaymentAccountController::class, 'store']);
                 Route::put('/payment-accounts/{id}', [AdminPaymentAccountController::class, 'update']);
                 Route::delete('/payment-accounts/{id}', [AdminPaymentAccountController::class, 'destroy']);
+
+                // Funcionários (staff)
+                Route::get('/staff', [AdminStaffController::class, 'index']);
+                Route::post('/staff', [AdminStaffController::class, 'store']);
+                Route::post('/staff/{id}/toggle-active', [AdminStaffController::class, 'toggleActive']);
+                Route::delete('/staff/{id}', [AdminStaffController::class, 'destroy']);
+
+                // Recursos (arbitragem)
+                Route::get('/recourses', [AdminRecourseController::class, 'index']);
+                Route::get('/recourses/{id}', [AdminRecourseController::class, 'show']);
+                Route::post('/recourses/{id}/reply', [AdminRecourseController::class, 'reply'])->middleware('throttle:30,1');
+                Route::post('/recourses/{id}/resolve', [AdminRecourseController::class, 'resolve']);
+                Route::post('/recourses/{id}/reject', [AdminRecourseController::class, 'reject']);
             });
         });
     });

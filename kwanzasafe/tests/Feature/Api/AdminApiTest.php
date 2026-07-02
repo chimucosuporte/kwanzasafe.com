@@ -1,9 +1,15 @@
 <?php
 
 use App\Models\ExchangeRate;
+use App\Models\Recourse;
 use App\Models\Transaction;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
+
+function superAdminUser(): User
+{
+    return User::factory()->create(['is_super_admin' => true]);
+}
 
 /*
 | API admin (app de administração) — autorização, stats, transições, KYC.
@@ -198,4 +204,50 @@ it('admin consulta a auditoria', function () {
     $this->getJson('/api/v1/admin/audit')
         ->assertOk()
         ->assertJsonStructure(['data', 'meta', 'stats' => ['total_24h', 'critical_24h'], 'categories', 'severities']);
+});
+
+// ---------------------------------------------------------------------------
+// Staff (super-admin)
+// ---------------------------------------------------------------------------
+
+it('super-admin cria, lista e desativa funcionários', function () {
+    Sanctum::actingAs(superAdminUser());
+
+    $this->postJson('/api/v1/admin/staff', [
+        'full_name' => 'Agente Um', 'email' => 'agente1@kwanzasafe.com',
+        'password' => 'segredo123', 'password_confirmation' => 'segredo123',
+    ])->assertCreated()->assertJsonPath('data.email', 'agente1@kwanzasafe.com');
+
+    $staff = User::where('email', 'agente1@kwanzasafe.com')->first();
+    expect($staff->is_admin)->toBeTrue();
+
+    $this->getJson('/api/v1/admin/staff')->assertOk()->assertJsonStructure(['staff', 'super_admins']);
+
+    $this->postJson("/api/v1/admin/staff/{$staff->id}/toggle-active")
+        ->assertOk()->assertJsonPath('data.is_active', false);
+});
+
+it('bloqueia suporte (não super-admin) na gestão de staff', function () {
+    Sanctum::actingAs(apiAdminUser());
+    $this->getJson('/api/v1/admin/staff')->assertStatus(403);
+});
+
+// ---------------------------------------------------------------------------
+// Recursos (super-admin)
+// ---------------------------------------------------------------------------
+
+it('super-admin responde e resolve um recurso', function () {
+    $tx = Transaction::factory()->awaitingPayment()->create();
+    $rec = Recourse::create(['transaction_id' => $tx->id, 'opened_by' => $tx->user_id, 'reason' => 'Não recebi os kwanzas.', 'status' => 'open']);
+    Sanctum::actingAs(superAdminUser());
+
+    $this->getJson('/api/v1/admin/recourses')->assertOk()->assertJsonStructure(['active', 'resolved']);
+
+    $this->postJson("/api/v1/admin/recourses/{$rec->id}/reply", ['message_text' => 'Estamos a analisar.'])
+        ->assertOk();
+    expect($rec->fresh()->status)->toBe('in_review');
+    $this->assertDatabaseHas('chat_messages', ['transaction_id' => $tx->id, 'channel' => 'recourse', 'message_text' => 'Estamos a analisar.']);
+
+    $this->postJson("/api/v1/admin/recourses/{$rec->id}/resolve", ['resolution' => 'Kwanzas reenviados.'])
+        ->assertOk()->assertJsonPath('data.status', 'resolved');
 });
