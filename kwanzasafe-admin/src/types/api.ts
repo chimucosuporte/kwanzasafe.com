@@ -126,6 +126,35 @@ export interface AdminUserRow {
   created_at: string | null;
 }
 
+export interface AdminPaymentAccount {
+  id: number;
+  currency: string;
+  holder: string;
+  identifier: string;
+  network: string | null;
+  instructions: string | null;
+  is_active: boolean;
+}
+
+export interface AuditEntry {
+  id: number;
+  action: string;
+  category: string;
+  severity: string;
+  description: string | null;
+  user_email: string | null;
+  ip_address: string | null;
+  created_at: string | null;
+}
+
+export interface AuditResponse {
+  data: AuditEntry[];
+  meta: { current_page: number; last_page: number; total: number };
+  stats: { total_24h: number; critical_24h: number; failed_logins: number; fraud_attempts: number };
+  categories: string[];
+  severities: string[];
+}
+
 export interface AdminUserDetail extends AdminUserRow {
   is_super_admin: boolean;
   role_label: string | null;

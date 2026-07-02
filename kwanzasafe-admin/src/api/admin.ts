@@ -1,7 +1,7 @@
 import { api } from '@/api/client';
 import type {
-  AdminChatMessage, AdminRate, AdminStats, AdminTransaction, AdminUserDetail, AdminUserRow,
-  KycDetail, KycListItem, PickedFile,
+  AdminChatMessage, AdminPaymentAccount, AdminRate, AdminStats, AdminTransaction, AdminUserDetail,
+  AdminUserRow, AuditResponse, KycDetail, KycListItem, PickedFile,
 } from '@/types/api';
 
 // ---- Dashboard ----
@@ -90,4 +90,29 @@ export async function fetchUser(id: number): Promise<AdminUserDetail> {
 export async function toggleUserAdmin(id: number): Promise<AdminUserDetail> {
   const { data } = await api.post(`/admin/users/${id}/toggle-admin`);
   return data.data;
+}
+
+// ---- Contas de pagamento (super-admin) ----
+export interface PaymentAccountPayload {
+  currency: string; holder: string; identifier: string; network?: string; instructions?: string; is_active: boolean;
+}
+
+export async function fetchPaymentAccounts(): Promise<{ data: AdminPaymentAccount[]; available_currencies: string[] }> {
+  const { data } = await api.get('/admin/payment-accounts');
+  return data;
+}
+
+export async function savePaymentAccount(id: number | null, payload: PaymentAccountPayload): Promise<AdminPaymentAccount> {
+  const { data } = id ? await api.put(`/admin/payment-accounts/${id}`, payload) : await api.post('/admin/payment-accounts', payload);
+  return data.data;
+}
+
+export async function deletePaymentAccount(id: number): Promise<void> {
+  await api.delete(`/admin/payment-accounts/${id}`);
+}
+
+// ---- Auditoria ----
+export async function fetchAudit(params: { category?: string; severity?: string; search?: string }): Promise<AuditResponse> {
+  const { data } = await api.get('/admin/audit', { params });
+  return data;
 }

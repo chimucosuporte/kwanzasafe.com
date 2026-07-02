@@ -69,15 +69,13 @@ export default function DashboardScreen() {
             </View>
 
             <Text style={styles.mgmtTitle}>Gestão</Text>
-            <View style={styles.mgmtRow}>
-              <Pressable style={styles.mgmt} onPress={() => router.push('/rates')}>
-                <Ionicons name="trending-up" size={22} color={colors.primaryBright} />
-                <Text style={styles.mgmtLabel}>Taxas</Text>
-              </Pressable>
-              <Pressable style={styles.mgmt} onPress={() => router.push('/users')}>
-                <Ionicons name="people" size={22} color={colors.primaryBright} />
-                <Text style={styles.mgmtLabel}>Utilizadores</Text>
-              </Pressable>
+            <View style={styles.mgmtGrid}>
+              <MgmtCard icon="trending-up" label="Taxas" onPress={() => router.push('/rates')} />
+              <MgmtCard icon="people" label="Utilizadores" onPress={() => router.push('/users')} />
+              <MgmtCard icon="document-text" label="Auditoria" onPress={() => router.push('/audit')} />
+              {user?.is_super_admin && (
+                <MgmtCard icon="card" label="Contas de pagamento" onPress={() => router.push('/payment-accounts')} />
+              )}
             </View>
           </>
         ) : null}
@@ -94,6 +92,15 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone: strin
       <Text style={[styles.kpiValue, { color: tone }]}>{value}</Text>
       <Text style={styles.kpiLabel}>{label}</Text>
     </View>
+  );
+}
+
+function MgmtCard({ icon, label, onPress }: { icon: any; label: string; onPress: () => void }) {
+  return (
+    <Pressable style={styles.mgmt} onPress={onPress}>
+      <Ionicons name={icon} size={22} color={colors.primaryBright} />
+      <Text style={styles.mgmtLabel}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -118,9 +125,9 @@ const styles = StyleSheet.create({
   kpiLabel: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
 
   mgmtTitle: { fontFamily: fonts.bodyBold, fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
-  mgmtRow: { flexDirection: 'row', gap: spacing.sm },
-  mgmt: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md },
-  mgmtLabel: { fontFamily: fonts.bodyBold, fontSize: fontSize.sm, color: colors.text },
+  mgmtGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  mgmt: { flexGrow: 1, flexBasis: '47%', flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md },
+  mgmtLabel: { fontFamily: fonts.bodyBold, fontSize: fontSize.sm, color: colors.text, flexShrink: 1 },
 
   errBox: { backgroundColor: colors.dangerTint, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
   errText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.danger, textAlign: 'center' },
