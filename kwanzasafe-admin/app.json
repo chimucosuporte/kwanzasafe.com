@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.kwanzasafe.admin",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#0a0d0b",
         "foregroundImage": "./assets/images/icon.png"
@@ -32,6 +33,13 @@
         }
       ],
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a78396f7-2215-4b80-9bfb-22d6e6cb5a77"
+      }
+    },
+    "owner": "edsonchimuco"
   }
 }
